@@ -26,8 +26,15 @@ function calcElo(ratingA, ratingB, winnerIsA, loserScore) {
   const multiplier = loserScore === 4 ? 0.5 : 1;
   const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
   const expectedB = 1 / (1 + Math.pow(10, (ratingA - ratingB) / 400));
-  if (winnerIsA) return { changeA: Math.round(K * multiplier * (1 - expectedA)), changeB: Math.round(K * multiplier * (0 - expectedB)) };
-  return { changeA: Math.round(K * multiplier * (0 - expectedA)), changeB: Math.round(K * multiplier * (1 - expectedB)) };
+  let changeA, changeB;
+  if (winnerIsA) {
+    changeA = Math.max(1, Math.round(K * multiplier * (1 - expectedA)));
+    changeB = Math.min(-1, Math.round(K * multiplier * (0 - expectedB)));
+  } else {
+    changeA = Math.min(-1, Math.round(K * multiplier * (0 - expectedA)));
+    changeB = Math.max(1, Math.round(K * multiplier * (1 - expectedB)));
+  }
+  return { changeA, changeB };
 }
 
 function getRank(elo) {
@@ -174,9 +181,9 @@ app.post('/api/match/result', async (req, res) => {
 
   const wIsP1 = winner_discord_id === p1.discord_id;
   const wId = wIsP1 ? p1.id : p2.id;
-  const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1, ls);
   const ws = winner_score || 5;
   const ls = loser_score || 0;
+  const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1, ls);
 
   await db.query(
     'INSERT INTO matches (player1_id, player2_id, winner_id, player1_elo_before, player2_elo_before, player1_elo_change, player2_elo_change, winner_score, loser_score) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
