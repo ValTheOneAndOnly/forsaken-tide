@@ -36,7 +36,7 @@ function initBot() {
     if (interaction.commandName === 'verify') {
       const embed = new EmbedBuilder()
         .setTitle('⚓ Forsaken Tide — Verify')
-        .setDescription(`Click below to join the leaderboard:\n\n[**Verify with Discord**](${SERVER_URL}/login)\n\nAfter logging in, set your Roblox username and build on your profile page.`)
+        .setDescription(`Click below to join the leaderboard:\n\n[**Verify with Discord**](${SERVER_URL}/login)\n\nAfter logging in, set your Roblox username and build (Skilled or Normal) on your profile page.`)
         .setColor(0xFFD700)
         .setFooter({ text: 'Forsaken Tide Leaderboard' });
       return interaction.reply({ embeds: [embed], ephemeral: true });
