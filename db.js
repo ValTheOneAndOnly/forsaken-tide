@@ -29,8 +29,18 @@ db.exec(`
     player2_elo_before INTEGER NOT NULL,
     player1_elo_change INTEGER NOT NULL DEFAULT 0,
     player2_elo_change INTEGER NOT NULL DEFAULT 0,
+    winner_score INTEGER NOT NULL DEFAULT 5,
+    loser_score INTEGER NOT NULL DEFAULT 0,
     played_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// add columns if table already exists
+try { db.exec('ALTER TABLE matches ADD COLUMN winner_score INTEGER NOT NULL DEFAULT 5'); } catch {}
+try { db.exec('ALTER TABLE matches ADD COLUMN loser_score INTEGER NOT NULL DEFAULT 0'); } catch {}
+`);
+
+try { db.exec('ALTER TABLE matches ADD COLUMN winner_score INTEGER NOT NULL DEFAULT 5'); } catch (e) {}
+try { db.exec('ALTER TABLE matches ADD COLUMN loser_score INTEGER NOT NULL DEFAULT 0'); } catch (e) {}
 
 module.exports = db;

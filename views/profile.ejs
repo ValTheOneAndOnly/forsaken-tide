@@ -50,6 +50,7 @@
   <% matchHistory.forEach(m => { const p1Won = m.winner_id === m.player1_id; %>
     <div class="match-row">
       <div><% if (player.id === m.player1_id) { %><span class="<%= p1Won ? 'match-winner' : 'match-loser' %>">vs <%= m.p2_name %></span><% } else { %><span class="<%= !p1Won ? 'match-winner' : 'match-loser' %>">vs <%= m.p1_name %></span><% } %></div>
+      <div style="color:#5a5a4a;font-size:0.85em"><%= m.winner_score %>-<%= m.loser_score %></div>
       <div><span class="<%= (player.id === m.player1_id ? m.player1_elo_change : m.player2_elo_change) >= 0 ? 'match-elo-plus' : 'match-elo-minus' %>"><%= (player.id === m.player1_id ? m.player1_elo_change : m.player2_elo_change) >= 0 ? '+' : '' %><%= player.id === m.player1_id ? m.player1_elo_change : m.player2_elo_change %></span><span class="match-date"> <%= new Date(m.played_at).toLocaleDateString() %></span></div>
     </div>
   <% }) %>

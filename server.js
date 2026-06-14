@@ -146,7 +146,7 @@ app.post('/api/update-profile', isAuth, (req, res) => {
 
 // ─── Bot Report API (called from bot.js) ───
 app.post('/api/match/result', (req, res) => {
-  const { p1_discord_id, p2_discord_id, winner_discord_id } = req.body;
+  const { p1_discord_id, p2_discord_id, winner_discord_id, winner_score, loser_score } = req.body;
   const p1 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(p1_discord_id);
   const p2 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(p2_discord_id);
   if (!p1 || !p2) return res.status(400).json({ error: 'User not found' });
@@ -154,8 +154,10 @@ app.post('/api/match/result', (req, res) => {
   const wIsP1 = winner_discord_id === p1.discord_id;
   const wId = wIsP1 ? p1.id : p2.id;
   const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1);
+  const ws = winner_score || 5;
+  const ls = loser_score || 0;
 
-  db.prepare('INSERT INTO matches (player1_id, player2_id, winner_id, player1_elo_before, player2_elo_before, player1_elo_change, player2_elo_change) VALUES (?, ?, ?, ?, ?, ?, ?)').run(p1.id, p2.id, wId, p1.elo, p2.elo, changeA, changeB);
+  db.prepare('INSERT INTO matches (player1_id, player2_id, winner_id, player1_elo_before, player2_elo_before, player1_elo_change, player2_elo_change, winner_score, loser_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(p1.id, p2.id, wId, p1.elo, p2.elo, changeA, changeB, ws, ls);
 
   db.prepare('UPDATE users SET elo = elo + ?, wins = wins + 1 WHERE id = ?').run(changeA, p1.id);
   db.prepare('UPDATE users SET elo = elo + ?, losses = losses + 1 WHERE id = ?').run(changeB, p1.id);
@@ -164,7 +166,7 @@ app.post('/api/match/result', (req, res) => {
 
   const np1 = db.prepare('SELECT * FROM users WHERE id = ?').get(p1.id);
   const np2 = db.prepare('SELECT * FROM users WHERE id = ?').get(p2.id);
-  res.json({ success: true, p1: { elo: np1.elo, change: changeA }, p2: { elo: np2.elo, change: changeB }, winner: wIsP1 ? p1.username : p2.username });
+  res.json({ success: true, p1: { elo_before: p1.elo, elo: np1.elo, change: changeA }, p2: { elo_before: p2.elo, elo: np2.elo, change: changeB }, winner: wIsP1 ? p1.username : p2.username, winner_score: ws, loser_score: ls });
 });
 
 // ─── Admin API ───

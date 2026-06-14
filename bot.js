@@ -13,7 +13,11 @@ function initBot() {
     new SlashCommandBuilder().setName('verify').setDescription('Get your verification link'),
     new SlashCommandBuilder().setName('profile').setDescription('View a player\'s profile').addUserOption(o => o.setName('user').setDescription('User').setRequired(false)),
     new SlashCommandBuilder().setName('leaderboard').setDescription('View top 10'),
-    new SlashCommandBuilder().setName('report').setDescription('Report a 1v1 match').addUserOption(o => o.setName('opponent').setDescription('Opponent').setRequired(true)).addUserOption(o => o.setName('winner').setDescription('Who won? (you or opponent)').setRequired(true)),
+    new SlashCommandBuilder().setName('log').setDescription('Log a FT5 1v1 match')
+      .addUserOption(o => o.setName('player1').setDescription('First player').setRequired(true))
+      .addUserOption(o => o.setName('player2').setDescription('Second player').setRequired(true))
+      .addUserOption(o => o.setName('winner').setDescription('Who won? (player1 or player2)').setRequired(true)),
+
   ];
 
   const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -67,32 +71,35 @@ function initBot() {
       return interaction.reply({ embeds: [embed] });
     }
 
-    if (interaction.commandName === 'report') {
-      const opponent = interaction.options.getUser('opponent');
+    if (interaction.commandName === 'log') {
+      const p1User = interaction.options.getUser('player1');
+      const p2User = interaction.options.getUser('player2');
       const winner = interaction.options.getUser('winner');
-      if (opponent.id === winner.id) return interaction.reply({ content: 'Opponent and winner cannot be the same.', ephemeral: true });
-      if (opponent.bot) return interaction.reply({ content: 'Bots cannot play.', ephemeral: true });
+      if (!p1User || !p2User || !winner) return interaction.reply({ content: 'Missing arguments.', ephemeral: true });
+      if (p1User.id === p2User.id) return interaction.reply({ content: 'Players must be different.', ephemeral: true });
+      if (winner.id !== p1User.id && winner.id !== p2User.id) return interaction.reply({ content: 'Winner must be player1 or player2.', ephemeral: true });
+      if (p1User.bot || p2User.bot) return interaction.reply({ content: 'Bots cannot play.', ephemeral: true });
 
-      const p1 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(interaction.user.id);
-      const p2 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(opponent.id);
-      if (!p1) return interaction.reply({ content: 'You are not registered. Use `/verify`.', ephemeral: true });
-      if (!p2) return interaction.reply({ content: 'Opponent is not registered.', ephemeral: true });
+      const p1 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(p1User.id);
+      const p2 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(p2User.id);
+      if (!p1) return interaction.reply({ content: `${p1User.username} is not registered. Use \`/verify\`.`, ephemeral: true });
+      if (!p2) return interaction.reply({ content: `${p2User.username} is not registered. Use \`/verify\`.`, ephemeral: true });
 
       const res = await fetch(`${SERVER_URL}/api/match/result`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p1_discord_id: interaction.user.id, p2_discord_id: opponent.id, winner_discord_id: winner.id }),
+        body: JSON.stringify({ p1_discord_id: p1User.id, p2_discord_id: p2User.id, winner_discord_id: winner.id }),
       });
       const data = await res.json();
       if (!data.success) return interaction.reply({ content: 'Error: ' + (data.error || 'Unknown'), ephemeral: true });
 
       const embed = new EmbedBuilder()
-        .setTitle('⚔ Match Reported')
-        .setDescription(`**${data.winner}** won!`)
-        .setColor(winner.id === interaction.user.id ? 0x00FF88 : 0xFF4466)
+        .setTitle('⚔ Match Logged')
+        .setDescription(`**${data.winner}** won 5-${data.loser_score || '?'}`)
+        .setColor(winner.id === p1User.id ? 0x00FF88 : 0xFF4466)
         .addFields(
-          { name: p1.username, value: `${p1.elo} → ${data.p1.elo} (${data.p1.change > 0 ? '+' : ''}${data.p1.change})`, inline: true },
-          { name: p2.username, value: `${p2.elo} → ${data.p2.elo} (${data.p2.change > 0 ? '+' : ''}${data.p2.change})`, inline: true },
+          { name: p1.username, value: `${data.p1.elo_before} → ${data.p1.elo} (${data.p1.change > 0 ? '+' : ''}${data.p1.change})`, inline: true },
+          { name: p2.username, value: `${data.p2.elo_before} → ${data.p2.elo} (${data.p2.change > 0 ? '+' : ''}${data.p2.change})`, inline: true },
         )
         .setFooter({ text: 'Forsaken Tide Leaderboard' });
       return interaction.reply({ embeds: [embed] });
