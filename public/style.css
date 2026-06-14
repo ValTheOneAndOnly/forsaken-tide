@@ -431,6 +431,29 @@ tbody td { padding: 12px 16px; font-size: 14px; }
   border-top: 1px solid rgba(255, 215, 0, 0.04);
 }
 
+/* ─── Discord Link ─── */
+.discord-link {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(15, 15, 22, 0.9);
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+}
+.discord-link:hover {
+  transform: scale(1.1);
+  border-color: #5865F2;
+  box-shadow: 0 0 20px rgba(88, 101, 242, 0.3);
+}
+
 /* ─── Toast ─── */
 .toast {
   position: fixed;
