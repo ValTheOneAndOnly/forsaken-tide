@@ -141,7 +141,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     let user = (await db.query('SELECT * FROM users WHERE discord_id = $1', [du.id])).rows[0];
     if (!user) {
       const result = await db.query(
-        'INSERT INTO users (discord_id, username, avatar_url, verified) VALUES ($1, $2, $3, 1) RETURNING *',
+        'INSERT INTO users (discord_id, username, avatar_url, elo, verified) VALUES ($1, $2, $3, 0, 1) RETURNING *',
         [du.id, du.username, `https://cdn.discordapp.com/avatars/${du.id}/${du.avatar}.png`]
       );
       user = result.rows[0];
