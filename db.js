@@ -36,11 +36,6 @@ db.exec(`
   );
 `);
 
-// add columns if table already exists
-try { db.exec('ALTER TABLE matches ADD COLUMN winner_score INTEGER NOT NULL DEFAULT 5'); } catch {}
-try { db.exec('ALTER TABLE matches ADD COLUMN loser_score INTEGER NOT NULL DEFAULT 0'); } catch {}
-`);
-
 try { db.exec('ALTER TABLE matches ADD COLUMN winner_score INTEGER NOT NULL DEFAULT 5'); } catch (e) {}
 try { db.exec('ALTER TABLE matches ADD COLUMN loser_score INTEGER NOT NULL DEFAULT 0'); } catch (e) {}
 try { db.exec('ALTER TABLE users ADD COLUMN build_items TEXT DEFAULT ""'); } catch (e) {}
