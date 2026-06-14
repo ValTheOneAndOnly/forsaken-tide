@@ -183,6 +183,12 @@ app.post('/api/match/result', async (req, res) => {
   const f2 = getFraction(p2.elo);
   if (f1 !== f2) return res.status(400).json({ error: `Fraction mismatch: F${f1} vs F${f2}. Players must be in the same fraction to fight.` });
 
+  const weekCount = (await db.query(
+    `SELECT COUNT(*) as cnt FROM matches WHERE ((player1_id = $1 AND player2_id = $2) OR (player1_id = $2 AND player2_id = $1)) AND date_trunc('week', played_at) = date_trunc('week', NOW())`,
+    [p1.id, p2.id]
+  )).rows[0].cnt;
+  if (parseInt(weekCount) >= 3) return res.status(400).json({ error: `These players have already fought ${weekCount} times this week. Max 3 matches per week against the same opponent.` });
+
   const wIsP1 = winner_discord_id === p1.discord_id;
   const wId = wIsP1 ? p1.id : p2.id;
   const ws = winner_score || 5;
