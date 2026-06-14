@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin — Forsaken Tide</title><link rel="stylesheet" href="/style.css"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>"></head>
+<body>
+<div class="bg"></div>
+<nav class="nav">
+  <div class="nav-logo">FORSAKEN TIDE <span>admin</span></div>
+  <div class="nav-links">
+    <a href="/">Leaderboard</a>
+    <a href="/profile/<%= user.id %>">Profile</a>
+    <a href="/admin" class="active">Admin</a>
+    <div class="nav-user">
+      <img class="nav-avatar" src="<%= user.avatar_url %>"><span class="nav-username"><%= user.username %></span>
+      <a href="/logout" class="btn btn-outline btn-sm">Logout</a>
+    </div>
+  </div>
+</nav>
+
+<section class="leaderboard-section" style="padding-top:40px;">
+  <div class="section-title">◆ Admin Panel <span>manage players</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Username</th><th>ELO</th><th>W/L</th><th>Actions</th></tr></thead>
+      <tbody>
+        <% players.forEach(p => { %>
+          <tr>
+            <td style="color:#5a5a4a;"><%= p.id %></td>
+            <td><%= p.username %></td>
+            <td class="elo-cell"><input class="form-input" style="width:80px;padding:4px 8px;" id="elo_<%= p.id %>" value="<%= p.elo %>"></td>
+            <td><input class="form-input" style="width:50px;padding:4px 8px;" id="wins_<%= p.id %>" value="<%= p.wins %>"> / <input class="form-input" style="width:50px;padding:4px 8px;" id="losses_<%= p.id %>" value="<%= p.losses %>"></td>
+            <td>
+              <button class="btn btn-gold btn-sm" onclick="updateUser(<%= p.id %>)">Save</button>
+              <button class="btn btn-sm" style="background:rgba(255,68,102,0.15);color:#FF4466;border:1px solid rgba(255,68,102,0.3);" onclick="deleteUser(<%= p.id %>)">Delete</button>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+<footer class="footer">Forsaken Tide Admin</footer>
+<script>
+function updateUser(id) {
+  const elo = document.getElementById('elo_' + id).value;
+  const wins = document.getElementById('wins_' + id).value;
+  const losses = document.getElementById('losses_' + id).value;
+  fetch('/api/admin/update-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: parseInt(id), elo: parseInt(elo), wins: parseInt(wins), losses: parseInt(losses) }),
+  }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
+}
+function deleteUser(id) {
+  if (!confirm('Delete user ' + id + '?')) return;
+  fetch('/api/admin/delete-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: parseInt(id) }),
+  }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
+}
+</script>
+</body></html>

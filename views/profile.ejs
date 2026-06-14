@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title><%= player.username %> — Forsaken Tide</title><link rel="stylesheet" href="/style.css"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>"></head>
+<body>
+<div class="bg"></div>
+<nav class="nav">
+  <div class="nav-logo">FORSAKEN TIDE <span>leaderboard</span></div>
+  <div class="nav-links">
+    <a href="/">Leaderboard</a>
+    <% if (user) { %>
+      <a href="/profile/<%= user.id %>" class="active">Profile</a>
+      <% if (user.discord_id === admin) { %><a href="/admin">Admin</a><% } %>
+      <div class="nav-user">
+        <img class="nav-avatar" src="<%= user.avatar_url %>"><span class="nav-username"><%= user.username %></span>
+        <a href="/logout" class="btn btn-outline btn-sm">Logout</a>
+      </div>
+    <% } else { %>
+      <a href="/login" class="btn btn-gold">◆ Login with Discord</a>
+    <% } %>
+  </div>
+</nav>
+
+<section class="profile">
+  <div class="profile-header">
+    <img class="profile-avatar" src="<%= player.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png' %>">
+    <div>
+      <div class="profile-name"><%= player.username %><% if (player.verified) { %><span class="verified-badge" style="display:inline-flex;vertical-align:middle;">✓</span><% } %></div>
+      <div class="profile-build"><%= player.roblox_username ? '⛓ ' + player.roblox_username : '' %><%= player.build ? ' · ⚔ ' + player.build : '' %></div>
+    </div>
+  </div>
+
+  <div class="profile-stats">
+    <div class="stat-card"><div class="stat-card-value"><%= player.elo %></div><div class="stat-card-label">ELO</div></div>
+    <div class="stat-card"><div class="stat-card-value"><%= player.wins %></div><div class="stat-card-label">Wins</div></div>
+    <div class="stat-card"><div class="stat-card-value"><%= player.losses %></div><div class="stat-card-label">Losses</div></div>
+    <div class="stat-card"><div class="stat-card-value"><%= player.wins + player.losses > 0 ? Math.round(player.wins / (player.wins + player.losses) * 100) : 0 %>%</div><div class="stat-card-label">Win Rate</div></div>
+  </div>
+
+  <% if (user && user.id === player.id) { %>
+    <div class="settings-section">
+      <div class="profile-section-title">◆ Edit Profile</div>
+      <div class="form-group"><label>Roblox Username</label><input class="form-input" id="robloxInput" value="<%= player.roblox_username || '' %>" placeholder="Your Roblox username"></div>
+      <div class="form-group"><label>Build</label><input class="form-input" id="buildInput" value="<%= player.build || '' %>" placeholder="e.g. Shark + Godhuman + Soul Guitar"></div>
+      <button class="btn btn-gold" onclick="saveProfile()">Save</button>
+    </div>
+  <% } %>
+
+  <div class="profile-section-title">◉ Match History</div>
+  <% if (matchHistory.length === 0) { %><div style="color:#5a5a4a;padding:20px;text-align:center;">No matches yet.</div><% } %>
+  <% matchHistory.forEach(m => { const p1Won = m.winner_id === m.player1_id; %>
+    <div class="match-row">
+      <div><% if (player.id === m.player1_id) { %><span class="<%= p1Won ? 'match-winner' : 'match-loser' %>">vs <%= m.p2_name %></span><% } else { %><span class="<%= !p1Won ? 'match-winner' : 'match-loser' %>">vs <%= m.p1_name %></span><% } %></div>
+      <div><span class="<%= (player.id === m.player1_id ? m.player1_elo_change : m.player2_elo_change) >= 0 ? 'match-elo-plus' : 'match-elo-minus' %>"><%= (player.id === m.player1_id ? m.player1_elo_change : m.player2_elo_change) >= 0 ? '+' : '' %><%= player.id === m.player1_id ? m.player1_elo_change : m.player2_elo_change %></span><span class="match-date"> <%= new Date(m.played_at).toLocaleDateString() %></span></div>
+    </div>
+  <% }) %>
+</section>
+<footer class="footer">Forsaken Tide Leaderboard</footer>
+<script src="/script.js"></script>
+</body></html>

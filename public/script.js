@@ -1,0 +1,28 @@
+function toast(msg, type) {
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function saveProfile() {
+  const roblox_username = document.getElementById('robloxInput')?.value || '';
+  const build = document.getElementById('buildInput')?.value || '';
+
+  fetch('/api/update-profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roblox_username, build }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      toast('Profile updated!', 'success');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      toast('Error: ' + (d.error || 'Unknown'), 'error');
+    }
+  })
+  .catch(() => toast('Network error', 'error'));
+}
