@@ -39,9 +39,9 @@ function initBot() {
     if (!member) return;
     const targetRank = getRankFromElo(elo);
     const roles = await member.guild.roles.fetch();
-    const rankRoles = roles.filter(r => RANKS.includes(r.name));
-    const toRemove = rankRoles.filter(r => r.name !== targetRank);
-    const toAdd = rankRoles.find(r => r.name === targetRank);
+    const rankRoles = roles.filter(r => RANKS.map(x => x.toLowerCase()).includes(r.name.toLowerCase()));
+    const toRemove = rankRoles.filter(r => r.name.toLowerCase() !== targetRank.toLowerCase());
+    const toAdd = rankRoles.find(r => r.name.toLowerCase() === targetRank.toLowerCase());
     await member.roles.remove(toRemove).catch(() => {});
     if (toAdd) await member.roles.add(toAdd).catch(() => {});
   }
@@ -146,13 +146,15 @@ function initBot() {
     if (interaction.commandName === 'ftsync') {
       const target = interaction.options.getUser('user');
       const guild = await client.guilds.fetch(GUILD_ID);
+      const allRoles = await guild.roles.fetch();
+      const foundRoles = allRoles.filter(r => RANKS.map(x => x.toLowerCase()).includes(r.name.toLowerCase())).map(r => r.name).join(', ');
       if (target) {
         const member = await guild.members.fetch(target.id).catch(() => null);
         if (!member) return interaction.reply({ content: 'User not found in server.', ephemeral: true });
         const user = (await db.query('SELECT * FROM users WHERE discord_id = $1', [target.id])).rows[0];
         if (!user) return interaction.reply({ content: 'Not registered.', ephemeral: true });
         await syncRankRole(member, user.elo);
-        return interaction.reply({ content: `Synced ${target.username} → ${getRankFromElo(user.elo)}`, ephemeral: true });
+        return interaction.reply({ content: `Synced ${target.username} → ${getRankFromElo(user.elo)} | Found roles: ${foundRoles || 'NONE'}`, ephemeral: true });
       }
       await interaction.deferReply({ ephemeral: true });
       const members = await guild.members.fetch();
@@ -162,7 +164,7 @@ function initBot() {
         const member = members.get(u.discord_id);
         if (member) { await syncRankRole(member, u.elo); count++; }
       }
-      return interaction.editReply({ content: `Synced ${count} members.` });
+      return interaction.editReply({ content: `Synced ${count} members. | Found roles: ${foundRoles || 'NONE'}` });
     }
 
     if (interaction.commandName === 'ftcommands') {
