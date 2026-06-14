@@ -229,6 +229,17 @@ tbody td { padding: 12px 16px; font-size: 14px; }
   color: #6a6a5a;
 }
 
+.rank-badge {
+  display: inline-block;
+  background: #1a1a24;
+  color: #FFD700;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 2px 10px;
+  border-radius: 4px;
+  border: 1px solid #FFD70033;
+}
+
 .elo-cell {
   font-weight: 800;
   color: #FFD700;

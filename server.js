@@ -22,11 +22,21 @@ app.use(session({
 }));
 
 function calcElo(ratingA, ratingB, winnerIsA) {
-  const K = 32;
+  const K = 8;
   const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
   const expectedB = 1 / (1 + Math.pow(10, (ratingA - ratingB) / 400));
   if (winnerIsA) return { changeA: Math.round(K * (1 - expectedA)), changeB: Math.round(K * (0 - expectedB)) };
   return { changeA: Math.round(K * (0 - expectedA)), changeB: Math.round(K * (1 - expectedB)) };
+}
+
+function getRank(elo) {
+  if (elo >= 701) return 'Z';
+  if (elo >= 551) return 'Y';
+  if (elo >= 401) return 'X';
+  if (elo >= 350) return 'S';
+  if (elo >= 250) return 'A';
+  if (elo >= 100) return 'B';
+  return 'C';
 }
 
 function isAuth(req, res, next) {
@@ -46,7 +56,8 @@ function isAdmin(req, res, next) {
 }
 
 app.get('/', async (req, res) => {
-  const top = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
+  const rows = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
+  const top = rows.map(r => ({ ...r, rank: getRank(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   const matches = (await db.query('SELECT COUNT(*) as count FROM matches')).rows[0].count;
   res.render('index', { user: req.session.user || null, top, total, matches, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
@@ -55,14 +66,16 @@ app.get('/', async (req, res) => {
 app.get('/leaderboard', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
-  const players = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
+  const rows = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
+  const players = rows.map(r => ({ ...r, rank: getRank(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   res.render('leaderboard', { user: req.session.user || null, players, page, pages: Math.ceil(total / limit), total });
 });
 
 app.get('/profile/:id', async (req, res) => {
-  const player = (await db.query('SELECT * FROM users WHERE id = $1', [req.params.id])).rows[0];
-  if (!player) return res.status(404).send('User not found');
+  const playerRaw = (await db.query('SELECT * FROM users WHERE id = $1', [req.params.id])).rows[0];
+  if (!playerRaw) return res.status(404).send('User not found');
+  const player = { ...playerRaw, rank: getRank(playerRaw.elo) };
   const matchHistory = (await db.query(`
     SELECT m.*, p1.username as p1_name, p2.username as p2_name
     FROM matches m
@@ -75,7 +88,8 @@ app.get('/profile/:id', async (req, res) => {
 });
 
 app.get('/admin', isAuth, isAdmin, async (req, res) => {
-  const players = (await db.query('SELECT id, discord_id, username, elo, wins, losses, verified FROM users ORDER BY elo DESC')).rows;
+  const rows = (await db.query('SELECT id, discord_id, username, elo, wins, losses, verified FROM users ORDER BY elo DESC')).rows;
+  const players = rows.map(r => ({ ...r, rank: getRank(r.elo) }));
   res.render('admin', { user: req.session.user, players });
 });
 
@@ -128,7 +142,8 @@ app.get('/auth/discord/callback', async (req, res) => {
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
 app.get('/api/leaderboard', async (req, res) => {
-  res.json((await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows);
+  const rows = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
+  res.json(rows.map(r => ({ ...r, rank: getRank(r.elo) })));
 });
 
 app.post('/api/update-profile', isAuth, async (req, res) => {

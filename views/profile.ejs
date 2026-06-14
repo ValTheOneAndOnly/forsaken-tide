@@ -25,12 +25,13 @@
     <img class="profile-avatar" src="<%= player.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png' %>">
     <div>
       <div class="profile-name"><%= player.username %><% if (player.verified) { %><span class="verified-badge" style="display:inline-flex;vertical-align:middle;">✓</span><% } %></div>
-      <div class="profile-build"><%= player.roblox_username ? '⛓ ' + player.roblox_username : '' %><%= player.build ? ' · ⚔ ' + player.build : '' %><%= player.build_items ? ' — ' + player.build_items : '' %></div>
+      <div class="profile-build"><%= player.rank ? '◈ ' + player.rank : '' %><%= player.roblox_username ? ' · ⛓ ' + player.roblox_username : '' %><%= player.build ? ' · ⚔ ' + player.build : '' %><%= player.build_items ? ' — ' + player.build_items : '' %></div>
     </div>
   </div>
 
   <div class="profile-stats">
     <div class="stat-card"><div class="stat-card-value"><%= player.elo %></div><div class="stat-card-label">ELO</div></div>
+    <div class="stat-card"><div class="stat-card-value"><%= player.rank %></div><div class="stat-card-label">Rank</div></div>
     <div class="stat-card"><div class="stat-card-value"><%= player.wins %></div><div class="stat-card-label">Wins</div></div>
     <div class="stat-card"><div class="stat-card-value"><%= player.losses %></div><div class="stat-card-label">Losses</div></div>
     <div class="stat-card"><div class="stat-card-value"><%= player.wins + player.losses > 0 ? Math.round(player.wins / (player.wins + player.losses) * 100) : 0 %>%</div><div class="stat-card-label">Win Rate</div></div>

@@ -51,10 +51,12 @@ function initBot() {
       if (!user) return interaction.reply({ content: 'Not registered. Use `/ftverify`.', ephemeral: true });
       const rankRes = await db.query('SELECT COUNT(*) as r FROM users WHERE elo > $1', [user.elo]);
       const rank = rankRes.rows[0].r + 1;
+      const userRank = user.elo >= 701 ? 'Z' : user.elo >= 551 ? 'Y' : user.elo >= 401 ? 'X' : user.elo >= 350 ? 'S' : user.elo >= 250 ? 'A' : user.elo >= 100 ? 'B' : 'C';
       const embed = new EmbedBuilder()
         .setTitle(user.username).setThumbnail(user.avatar_url || target.displayAvatarURL()).setColor(0xFFD700)
         .addFields(
           { name: '◆ ELO', value: `**${user.elo}**`, inline: true },
+          { name: '◈ Rank', value: `**${userRank}**`, inline: true },
           { name: '◉ W/L', value: `${user.wins}W / ${user.losses}L`, inline: true },
           { name: '■ Win Rate', value: `${user.wins + user.losses > 0 ? Math.round(user.wins / (user.wins + user.losses) * 100) : 0}%`, inline: true },
           { name: '⛓ Roblox', value: user.roblox_username || 'Not set', inline: true },
@@ -69,8 +71,9 @@ function initBot() {
       const top = result.rows;
       if (top.length === 0) return interaction.reply({ content: 'No players yet. Use `/ftverify` to join!', ephemeral: true });
       const desc = top.map((p, i) => {
+        const r = p.elo >= 701 ? 'Z' : p.elo >= 551 ? 'Y' : p.elo >= 401 ? 'X' : p.elo >= 350 ? 'S' : p.elo >= 250 ? 'A' : p.elo >= 100 ? 'B' : 'C';
         const m = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        return `${m} **${p.username}** — ${p.elo} ELO (${p.wins}W/${p.losses}L)`;
+        return `${m} **${p.username}** [${r}] — ${p.elo} ELO (${p.wins}W/${p.losses}L)`;
       }).join('\n');
       const embed = new EmbedBuilder().setTitle('⚓ Forsaken Tide — Top 10').setDescription(desc).setColor(0xFFD700).setFooter({ text: 'Full leaderboard at ' + SERVER_URL });
       return interaction.reply({ embeds: [embed] });
@@ -118,7 +121,7 @@ function initBot() {
         .addFields(
           { name: '/ftverify', value: 'Get a link to log in and join the leaderboard', inline: false },
           { name: '/ftprofile', value: 'View your stats (or mention someone to see theirs)', inline: false },
-          { name: '/ftleaderboard', value: 'View top 10 players', inline: false },
+          { name: '/ftleaderboard', value: 'View top 10 players with ranks', inline: false },
           { name: '/ftlog', value: 'Log a FT5 match: `/ftlog player1:@p1 player2:@p2 winner:@winner loser_score:3`', inline: false },
           { name: '/ftcommands', value: 'Show this list', inline: false },
         )
