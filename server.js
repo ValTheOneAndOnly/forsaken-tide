@@ -21,12 +21,13 @@ app.use(session({
   cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-function calcElo(ratingA, ratingB, winnerIsA) {
+function calcElo(ratingA, ratingB, winnerIsA, loserScore) {
   const K = 8;
+  const multiplier = loserScore === 4 ? 0.5 : 1;
   const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
   const expectedB = 1 / (1 + Math.pow(10, (ratingA - ratingB) / 400));
-  if (winnerIsA) return { changeA: Math.round(K * (1 - expectedA)), changeB: Math.round(K * (0 - expectedB)) };
-  return { changeA: Math.round(K * (0 - expectedA)), changeB: Math.round(K * (1 - expectedB)) };
+  if (winnerIsA) return { changeA: Math.round(K * multiplier * (1 - expectedA)), changeB: Math.round(K * multiplier * (0 - expectedB)) };
+  return { changeA: Math.round(K * multiplier * (0 - expectedA)), changeB: Math.round(K * multiplier * (1 - expectedB)) };
 }
 
 function getRank(elo) {
@@ -163,7 +164,7 @@ app.post('/api/match/result', async (req, res) => {
 
   const wIsP1 = winner_discord_id === p1.discord_id;
   const wId = wIsP1 ? p1.id : p2.id;
-  const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1);
+  const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1, ls);
   const ws = winner_score || 5;
   const ls = loser_score || 0;
 
