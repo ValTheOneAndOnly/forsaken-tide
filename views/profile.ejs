@@ -9,7 +9,7 @@
     <a href="/">Leaderboard</a>
     <% if (user) { %>
       <a href="/profile/<%= user.id %>" class="active">Profile</a>
-      <% if (user.discord_id === admin) { %><a href="/admin">Admin</a><% } %>
+      <% if (isAdmin) { %><a href="/admin">Admin</a><% } %>
       <div class="nav-user">
         <img class="nav-avatar" src="<%= user.avatar_url %>"><span class="nav-username"><%= user.username %></span>
         <a href="/logout" class="btn btn-outline btn-sm">Logout</a>

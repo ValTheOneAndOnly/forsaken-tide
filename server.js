@@ -35,8 +35,14 @@ function isAuth(req, res, next) {
   res.redirect('/login');
 }
 
+const admins = (process.env.ADMIN_ID || '').split(',').map(s => s.trim());
+
+function isAdminUser(discordId) {
+  return admins.includes(discordId);
+}
+
 function isAdmin(req, res, next) {
-  if (req.session.user && req.session.user.discord_id === process.env.ADMIN_ID) return next();
+  if (req.session.user && isAdminUser(req.session.user.discord_id)) return next();
   res.status(403).send('Not authorized');
 }
 
@@ -45,7 +51,7 @@ app.get('/', (req, res) => {
   const top = db.prepare('SELECT id, username, roblox_username, elo, wins, losses, build, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100').all();
   const total = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   const matches = db.prepare('SELECT COUNT(*) as count FROM matches').get().count;
-  res.render('index', { user: req.session.user || null, top, total, matches, admin: process.env.ADMIN_ID });
+  res.render('index', { user: req.session.user || null, top, total, matches, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
 });
 
 app.get('/leaderboard', (req, res) => {
@@ -67,7 +73,7 @@ app.get('/profile/:id', (req, res) => {
     WHERE m.player1_id = ? OR m.player2_id = ?
     ORDER BY m.played_at DESC LIMIT 50
   `).all(player.id, player.id);
-  res.render('profile', { user: req.session.user || null, player, matchHistory, admin: process.env.ADMIN_ID });
+  res.render('profile', { user: req.session.user || null, player, matchHistory, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
 });
 
 app.get('/admin', isAuth, isAdmin, (req, res) => {
