@@ -20,7 +20,6 @@ function initBot() {
       .addIntegerOption(o => o.setName('loser_score').setDescription('Loser score (0-4)').setMinValue(0).setMaxValue(4).setRequired(true)),
     new SlashCommandBuilder().setName('ftcommands').setDescription('Show all Forsaken Tide commands'),
     new SlashCommandBuilder().setName('ftsync').setDescription('Sync rank roles for all users or a specific user').addUserOption(o => o.setName('user').setDescription('User to sync').setRequired(false)),
-
   ];
 
   const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -152,7 +151,7 @@ function initBot() {
           const m2 = await guild.members.fetch(p2User.id).catch(() => null);
           if (m1) await syncRankRole(m1, data.p1.elo);
           if (m2) await syncRankRole(m2, data.p2.elo);
-        } catch {}
+        } catch (e) { console.error('[Bot] Role sync error:', e); }
       });
     }
 
