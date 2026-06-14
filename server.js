@@ -40,6 +40,12 @@ function getRank(elo) {
   return 'C';
 }
 
+function getFraction(elo) {
+  if (elo >= 551) return 3;
+  if (elo >= 350) return 2;
+  return 1;
+}
+
 function isAuth(req, res, next) {
   if (req.session.user) return next();
   res.redirect('/login');
@@ -58,7 +64,7 @@ function isAdmin(req, res, next) {
 
 app.get('/', async (req, res) => {
   const rows = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
-  const top = rows.map(r => ({ ...r, rank: getRank(r.elo) }));
+  const top = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   const matches = (await db.query('SELECT COUNT(*) as count FROM matches')).rows[0].count;
   res.render('index', { user: req.session.user || null, top, total, matches, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
@@ -68,7 +74,7 @@ app.get('/leaderboard', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
   const rows = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
-  const players = rows.map(r => ({ ...r, rank: getRank(r.elo) }));
+  const players = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   res.render('leaderboard', { user: req.session.user || null, players, page, pages: Math.ceil(total / limit), total });
 });
@@ -76,7 +82,7 @@ app.get('/leaderboard', async (req, res) => {
 app.get('/profile/:id', async (req, res) => {
   const playerRaw = (await db.query('SELECT * FROM users WHERE id = $1', [req.params.id])).rows[0];
   if (!playerRaw) return res.status(404).send('User not found');
-  const player = { ...playerRaw, rank: getRank(playerRaw.elo) };
+  const player = { ...playerRaw, rank: getRank(playerRaw.elo), fraction: getFraction(playerRaw.elo) };
   const matchHistory = (await db.query(`
     SELECT m.*, p1.username as p1_name, p2.username as p2_name
     FROM matches m
@@ -144,7 +150,7 @@ app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
 app.get('/api/leaderboard', async (req, res) => {
   const rows = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
-  res.json(rows.map(r => ({ ...r, rank: getRank(r.elo) })));
+  res.json(rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) })));
 });
 
 app.post('/api/update-profile', isAuth, async (req, res) => {
@@ -161,6 +167,10 @@ app.post('/api/match/result', async (req, res) => {
   const p1 = (await db.query('SELECT * FROM users WHERE discord_id = $1', [p1_discord_id])).rows[0];
   const p2 = (await db.query('SELECT * FROM users WHERE discord_id = $1', [p2_discord_id])).rows[0];
   if (!p1 || !p2) return res.status(400).json({ error: 'User not found' });
+
+  const f1 = getFraction(p1.elo);
+  const f2 = getFraction(p2.elo);
+  if (f1 !== f2) return res.status(400).json({ error: `Fraction mismatch: F${f1} vs F${f2}. Players must be in the same fraction to fight.` });
 
   const wIsP1 = winner_discord_id === p1.discord_id;
   const wId = wIsP1 ? p1.id : p2.id;

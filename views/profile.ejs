@@ -32,6 +32,7 @@
   <div class="profile-stats">
     <div class="stat-card"><div class="stat-card-value"><%= player.elo %></div><div class="stat-card-label">ELO</div></div>
     <div class="stat-card"><div class="stat-card-value"><%= player.rank %></div><div class="stat-card-label">Rank</div></div>
+    <div class="stat-card"><div class="stat-card-value">F<%= player.fraction %></div><div class="stat-card-label">Fraction</div></div>
     <div class="stat-card"><div class="stat-card-value"><%= player.wins %></div><div class="stat-card-label">Wins</div></div>
     <div class="stat-card"><div class="stat-card-value"><%= player.losses %></div><div class="stat-card-label">Losses</div></div>
     <div class="stat-card"><div class="stat-card-value"><%= player.wins + player.losses > 0 ? Math.round(player.wins / (player.wins + player.losses) * 100) : 0 %>%</div><div class="stat-card-label">Win Rate</div></div>

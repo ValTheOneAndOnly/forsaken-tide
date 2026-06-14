@@ -79,11 +79,13 @@ function initBot() {
       const rankRes = await db.query('SELECT COUNT(*) as r FROM users WHERE elo > $1', [user.elo]);
       const rank = rankRes.rows[0].r + 1;
       const userRank = user.elo >= 701 ? 'Z' : user.elo >= 551 ? 'Y' : user.elo >= 401 ? 'X' : user.elo >= 350 ? 'S' : user.elo >= 250 ? 'A' : user.elo >= 100 ? 'B' : 'C';
+      const userFrac = user.elo >= 551 ? 3 : user.elo >= 350 ? 2 : 1;
       const embed = new EmbedBuilder()
         .setTitle(user.username).setThumbnail(user.avatar_url || target.displayAvatarURL()).setColor(0xFFD700)
         .addFields(
           { name: '◆ ELO', value: `**${user.elo}**`, inline: true },
           { name: '◈ Rank', value: `**${userRank}**`, inline: true },
+          { name: '▣ Fraction', value: `**F${userFrac}**`, inline: true },
           { name: '◉ W/L', value: `${user.wins}W / ${user.losses}L`, inline: true },
           { name: '■ Win Rate', value: `${user.wins + user.losses > 0 ? Math.round(user.wins / (user.wins + user.losses) * 100) : 0}%`, inline: true },
           { name: '⛓ Roblox', value: user.roblox_username || 'Not set', inline: true },
@@ -98,9 +100,10 @@ function initBot() {
       const top = result.rows;
       if (top.length === 0) return interaction.reply({ content: 'No players yet. Use `/ftverify` to join!', ephemeral: true });
       const desc = top.map((p, i) => {
+        const f = p.elo >= 551 ? 3 : p.elo >= 350 ? 2 : 1;
         const r = p.elo >= 701 ? 'Z' : p.elo >= 551 ? 'Y' : p.elo >= 401 ? 'X' : p.elo >= 350 ? 'S' : p.elo >= 250 ? 'A' : p.elo >= 100 ? 'B' : 'C';
         const m = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        return `${m} **${p.username}** [${r}] — ${p.elo} ELO (${p.wins}W/${p.losses}L)`;
+        return `${m} **${p.username}** [${r} F${f}] — ${p.elo} ELO (${p.wins}W/${p.losses}L)`;
       }).join('\n');
       const embed = new EmbedBuilder().setTitle('⚓ Forsaken Tide — Top 10').setDescription(desc).setColor(0xFFD700).setFooter({ text: 'Full leaderboard at ' + SERVER_URL });
       return interaction.reply({ embeds: [embed] });
@@ -120,6 +123,9 @@ function initBot() {
       const p2 = (await db.query('SELECT * FROM users WHERE discord_id = $1', [p2User.id])).rows[0];
       if (!p1) return interaction.reply({ content: `${p1User.username} is not registered. Use \`/ftverify\`.`, ephemeral: true });
       if (!p2) return interaction.reply({ content: `${p2User.username} is not registered. Use \`/ftverify\`.`, ephemeral: true });
+
+      function getF(elo) { return elo >= 551 ? 3 : elo >= 350 ? 2 : 1; }
+      if (getF(p1.elo) !== getF(p2.elo)) return interaction.reply({ content: `Players are in different fractions (F${getF(p1.elo)} vs F${getF(p2.elo)}). They cannot fight.`, ephemeral: true });
 
       const res = await fetch(`${SERVER_URL}/api/match/result`, {
         method: 'POST',

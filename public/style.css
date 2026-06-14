@@ -240,6 +240,17 @@ tbody td { padding: 12px 16px; font-size: 14px; }
   border: 1px solid #FFD70033;
 }
 
+.frac-badge {
+  display: inline-block;
+  background: #0e1624;
+  color: #5a8aff;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #5a8aff33;
+}
+
 .elo-cell {
   font-weight: 800;
   color: #FFD700;
