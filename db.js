@@ -15,6 +15,7 @@ db.exec(`
     wins INTEGER NOT NULL DEFAULT 0,
     losses INTEGER NOT NULL DEFAULT 0,
     build TEXT DEFAULT '',
+    build_items TEXT DEFAULT '',
     verified INTEGER NOT NULL DEFAULT 0,
     avatar_url TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -42,5 +43,6 @@ try { db.exec('ALTER TABLE matches ADD COLUMN loser_score INTEGER NOT NULL DEFAU
 
 try { db.exec('ALTER TABLE matches ADD COLUMN winner_score INTEGER NOT NULL DEFAULT 5'); } catch (e) {}
 try { db.exec('ALTER TABLE matches ADD COLUMN loser_score INTEGER NOT NULL DEFAULT 0'); } catch (e) {}
+try { db.exec('ALTER TABLE users ADD COLUMN build_items TEXT DEFAULT ""'); } catch (e) {}
 
 module.exports = db;

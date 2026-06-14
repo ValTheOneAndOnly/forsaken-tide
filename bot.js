@@ -54,7 +54,7 @@ function initBot() {
           { name: '◉ W/L', value: `${user.wins}W / ${user.losses}L`, inline: true },
           { name: '■ Win Rate', value: `${user.wins + user.losses > 0 ? Math.round(user.wins / (user.wins + user.losses) * 100) : 0}%`, inline: true },
           { name: '⛓ Roblox', value: user.roblox_username || 'Not set', inline: true },
-          { name: '⚔ Build', value: user.build || 'Not set', inline: true },
+          { name: '⚔ Build', value: user.build ? (user.build + (user.build_items ? ' — ' + user.build_items : '')) : 'Not set', inline: true },
           { name: '# Rank', value: `#${rank}`, inline: true },
         );
       return interaction.reply({ embeds: [embed] });

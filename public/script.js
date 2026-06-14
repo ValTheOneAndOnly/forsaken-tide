@@ -9,11 +9,12 @@ function toast(msg, type) {
 function saveProfile() {
   const roblox_username = document.getElementById('robloxInput')?.value || '';
   const build = document.getElementById('buildInput')?.value || '';
+  const build_items = document.getElementById('buildItemsInput')?.value || '';
 
   fetch('/api/update-profile', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ roblox_username, build }),
+    body: JSON.stringify({ roblox_username, build, build_items }),
   })
   .then(r => r.json())
   .then(d => {

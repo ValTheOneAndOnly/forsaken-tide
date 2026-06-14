@@ -41,7 +41,7 @@
           <tr>
             <td class="rank-cell rank-<%= i < 3 ? i + 1 : '' %>"><%= i + 1 %></td>
             <td><div class="player-cell"><img class="player-avatar" src="<%= p.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png' %>"><div><a href="/profile/<%= p.id %>" class="player-name"><%= p.username %><% if (p.verified) { %><span class="verified-badge">✓</span><% } %></a></div></div></td>
-            <td class="player-build"><%= p.build || '—' %></td>
+            <td class="player-build"><%= p.build || '—' %><%= p.build_items ? ' — ' + p.build_items : '' %></td>
             <td class="elo-cell"><%= p.elo %></td>
             <td><%= p.wins %>W / <%= p.losses %>L</td>
             <td class="wr-cell"><%= p.wins + p.losses > 0 ? Math.round(p.wins / (p.wins + p.losses) * 100) : 0 %>%</td>

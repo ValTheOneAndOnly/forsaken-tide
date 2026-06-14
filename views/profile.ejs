@@ -25,7 +25,7 @@
     <img class="profile-avatar" src="<%= player.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png' %>">
     <div>
       <div class="profile-name"><%= player.username %><% if (player.verified) { %><span class="verified-badge" style="display:inline-flex;vertical-align:middle;">✓</span><% } %></div>
-      <div class="profile-build"><%= player.roblox_username ? '⛓ ' + player.roblox_username : '' %><%= player.build ? ' · ⚔ ' + player.build : '' %></div>
+      <div class="profile-build"><%= player.roblox_username ? '⛓ ' + player.roblox_username : '' %><%= player.build ? ' · ⚔ ' + player.build : '' %><%= player.build_items ? ' — ' + player.build_items : '' %></div>
     </div>
   </div>
 
@@ -40,7 +40,8 @@
     <div class="settings-section">
       <div class="profile-section-title">◆ Edit Profile</div>
       <div class="form-group"><label>Roblox Username</label><input class="form-input" id="robloxInput" value="<%= player.roblox_username || '' %>" placeholder="Your Roblox username"></div>
-      <div class="form-group"><label>Build</label><select class="form-input" id="buildInput"><option value="Normal" <%= player.build === 'Normal' ? 'selected' : '' %>>Normal</option><option value="Skilled" <%= player.build === 'Skilled' ? 'selected' : '' %>>Skilled</option></select></div>
+      <div class="form-group"><label>Build Type</label><select class="form-input" id="buildInput"><option value="Normal" <%= player.build === 'Normal' ? 'selected' : '' %>>Normal</option><option value="Skilled" <%= player.build === 'Skilled' ? 'selected' : '' %>>Skilled</option></select></div>
+      <div class="form-group"><label>Items / Build</label><input class="form-input" id="buildItemsInput" value="<%= player.build_items || '' %>" placeholder="e.g. Shark + Godhuman + Soul Guitar"></div>
       <button class="btn btn-gold" onclick="saveProfile()">Save</button>
     </div>
   <% } %>

@@ -48,7 +48,7 @@ function isAdmin(req, res, next) {
 
 // ─── Pages ───
 app.get('/', (req, res) => {
-  const top = db.prepare('SELECT id, username, roblox_username, elo, wins, losses, build, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100').all();
+  const top = db.prepare('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100').all();
   const total = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   const matches = db.prepare('SELECT COUNT(*) as count FROM matches').get().count;
   res.render('index', { user: req.session.user || null, top, total, matches, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
@@ -57,7 +57,7 @@ app.get('/', (req, res) => {
 app.get('/leaderboard', (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
-  const players = db.prepare('SELECT id, username, roblox_username, elo, wins, losses, build, avatar_url, verified FROM users ORDER BY elo DESC LIMIT ? OFFSET ?').all(limit, (page - 1) * limit);
+  const players = db.prepare('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT ? OFFSET ?').all(limit, (page - 1) * limit);
   const total = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   res.render('leaderboard', { user: req.session.user || null, players, page, pages: Math.ceil(total / limit), total });
 });
@@ -132,13 +132,13 @@ app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
 // ─── API ───
 app.get('/api/leaderboard', (req, res) => {
-  res.json(db.prepare('SELECT id, username, roblox_username, elo, wins, losses, build, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100').all());
+  res.json(db.prepare('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100').all());
 });
 
 app.post('/api/update-profile', isAuth, (req, res) => {
-  const { roblox_username, build } = req.body;
-  db.prepare('UPDATE users SET roblox_username = ?, build = ? WHERE discord_id = ?').run(
-    roblox_username || '', build || '', req.session.user.discord_id
+  const { roblox_username, build, build_items } = req.body;
+  db.prepare('UPDATE users SET roblox_username = ?, build = ?, build_items = ? WHERE discord_id = ?').run(
+    roblox_username || '', build || '', build_items || '', req.session.user.discord_id
   );
   req.session.user = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(req.session.user.discord_id);
   res.json({ success: true });
