@@ -110,12 +110,12 @@ app.get('/auth/discord/callback', async (req, res) => {
     if (!user) {
       const result = await db.query(
         'INSERT INTO users (discord_id, username, avatar_url, verified) VALUES ($1, $2, $3, 1) RETURNING *',
-        [du.id, du.global_name || du.username, `https://cdn.discordapp.com/avatars/${du.id}/${du.avatar}.png`]
+        [du.id, du.username, `https://cdn.discordapp.com/avatars/${du.id}/${du.avatar}.png`]
       );
       user = result.rows[0];
     } else {
       await db.query('UPDATE users SET username = $1, avatar_url = $2, verified = 1 WHERE discord_id = $3', [
-        du.global_name || du.username,
+        du.username,
         `https://cdn.discordapp.com/avatars/${du.id}/${du.avatar}.png`,
         du.id
       ]);
