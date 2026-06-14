@@ -144,14 +144,15 @@ function initBot() {
           { name: p2.username, value: `${data.p2.elo_before} → ${data.p2.elo} (${data.p2.change > 0 ? '+' : ''}${data.p2.change})`, inline: true },
         )
         .setFooter({ text: 'Forsaken Tide Leaderboard' });
-      try {
-        const guild = await client.guilds.fetch(GUILD_ID);
-        const m1 = await guild.members.fetch(p1User.id).catch(() => null);
-        const m2 = await guild.members.fetch(p2User.id).catch(() => null);
-        if (m1) syncRankRole(m1, data.p1.elo);
-        if (m2) syncRankRole(m2, data.p2.elo);
-      } catch {}
-      return interaction.reply({ embeds: [embed] });
+      return interaction.reply({ embeds: [embed] }).then(async () => {
+        try {
+          const guild = await client.guilds.fetch(GUILD_ID);
+          const m1 = await guild.members.fetch(p1User.id).catch(() => null);
+          const m2 = await guild.members.fetch(p2User.id).catch(() => null);
+          if (m1) await syncRankRole(m1, data.p1.elo);
+          if (m2) await syncRankRole(m2, data.p2.elo);
+        } catch {}
+      });
     }
 
     if (interaction.commandName === 'ftsync') {
