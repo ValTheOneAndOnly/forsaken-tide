@@ -61,6 +61,7 @@ function initBot() {
 
   client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
+    if (interaction.guildId !== GUILD_ID) return interaction.reply({ content: 'This bot is private and can only be used in the authorized server.', ephemeral: true });
 
     if (interaction.commandName === 'ftverify') {
       const embed = new EmbedBuilder()
