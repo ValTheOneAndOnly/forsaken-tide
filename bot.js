@@ -17,6 +17,7 @@ function initBot() {
       .addUserOption(o => o.setName('player1').setDescription('First player').setRequired(true))
       .addUserOption(o => o.setName('player2').setDescription('Second player').setRequired(true))
       .addUserOption(o => o.setName('winner').setDescription('Who won? (player1 or player2)').setRequired(true)),
+    new SlashCommandBuilder().setName('commands').setDescription('Show all available commands'),
 
   ];
 
@@ -100,6 +101,21 @@ function initBot() {
         .addFields(
           { name: p1.username, value: `${data.p1.elo_before} → ${data.p1.elo} (${data.p1.change > 0 ? '+' : ''}${data.p1.change})`, inline: true },
           { name: p2.username, value: `${data.p2.elo_before} → ${data.p2.elo} (${data.p2.change > 0 ? '+' : ''}${data.p2.change})`, inline: true },
+        )
+        .setFooter({ text: 'Forsaken Tide Leaderboard' });
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    if (interaction.commandName === 'commands') {
+      const embed = new EmbedBuilder()
+        .setTitle('⚓ Forsaken Tide — Commands')
+        .setColor(0xFFD700)
+        .addFields(
+          { name: '/verify', value: 'Get a link to log in and join the leaderboard', inline: false },
+          { name: '/profile', value: 'View your stats (or mention someone to see theirs)', inline: false },
+          { name: '/leaderboard', value: 'View top 10 players', inline: false },
+          { name: '/log', value: 'Log a FT5 match: `/log player1:@p1 player2:@p2 winner:@winner`', inline: false },
+          { name: '/commands', value: 'Show this list', inline: false },
         )
         .setFooter({ text: 'Forsaken Tide Leaderboard' });
       return interaction.reply({ embeds: [embed] });
