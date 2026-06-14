@@ -11,7 +11,7 @@ db.init = async () => {
       discord_id TEXT UNIQUE NOT NULL,
       username TEXT NOT NULL DEFAULT 'Unknown',
       roblox_username TEXT DEFAULT '',
-      elo INTEGER NOT NULL DEFAULT 1000,
+      elo INTEGER NOT NULL DEFAULT 0,
       wins INTEGER NOT NULL DEFAULT 0,
       losses INTEGER NOT NULL DEFAULT 0,
       build TEXT DEFAULT '',
