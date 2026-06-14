@@ -45,9 +45,11 @@ function initBot() {
 
     if (interaction.commandName === 'ftprofile') {
       const target = interaction.options.getUser('user') || interaction.user;
-      const user = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(target.id);
-      if (!user)       return interaction.reply({ content: 'Not registered. Use `/ftverify`.', ephemeral: true });
-      const rank = db.prepare('SELECT COUNT(*) as r FROM users WHERE elo > ?').get(user.elo).r + 1;
+      const rows = await db.query('SELECT * FROM users WHERE discord_id = $1', [target.id]);
+      const user = rows.rows[0];
+      if (!user) return interaction.reply({ content: 'Not registered. Use `/ftverify`.', ephemeral: true });
+      const rankRes = await db.query('SELECT COUNT(*) as r FROM users WHERE elo > $1', [user.elo]);
+      const rank = rankRes.rows[0].r + 1;
       const embed = new EmbedBuilder()
         .setTitle(user.username).setThumbnail(user.avatar_url || target.displayAvatarURL()).setColor(0xFFD700)
         .addFields(
@@ -62,7 +64,8 @@ function initBot() {
     }
 
     if (interaction.commandName === 'ftleaderboard') {
-      const top = db.prepare('SELECT username, elo, wins, losses FROM users ORDER BY elo DESC LIMIT 10').all();
+      const result = await db.query('SELECT username, elo, wins, losses FROM users ORDER BY elo DESC LIMIT 10');
+      const top = result.rows;
       if (top.length === 0) return interaction.reply({ content: 'No players yet. Use `/ftverify` to join!', ephemeral: true });
       const desc = top.map((p, i) => {
         const m = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
@@ -81,8 +84,8 @@ function initBot() {
       if (winner.id !== p1User.id && winner.id !== p2User.id) return interaction.reply({ content: 'Winner must be player1 or player2.', ephemeral: true });
       if (p1User.bot || p2User.bot) return interaction.reply({ content: 'Bots cannot play.', ephemeral: true });
 
-      const p1 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(p1User.id);
-      const p2 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(p2User.id);
+      const p1 = (await db.query('SELECT * FROM users WHERE discord_id = $1', [p1User.id])).rows[0];
+      const p2 = (await db.query('SELECT * FROM users WHERE discord_id = $1', [p2User.id])).rows[0];
       if (!p1) return interaction.reply({ content: `${p1User.username} is not registered. Use \`/ftverify\`.`, ephemeral: true });
       if (!p2) return interaction.reply({ content: `${p2User.username} is not registered. Use \`/ftverify\`.`, ephemeral: true });
 

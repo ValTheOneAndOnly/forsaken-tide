@@ -21,7 +21,6 @@ app.use(session({
   cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-// ─── ELO Calculation ───
 function calcElo(ratingA, ratingB, winnerIsA) {
   const K = 32;
   const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
@@ -46,42 +45,40 @@ function isAdmin(req, res, next) {
   res.status(403).send('Not authorized');
 }
 
-// ─── Pages ───
-app.get('/', (req, res) => {
-  const top = db.prepare('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100').all();
-  const total = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-  const matches = db.prepare('SELECT COUNT(*) as count FROM matches').get().count;
+app.get('/', async (req, res) => {
+  const top = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
+  const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
+  const matches = (await db.query('SELECT COUNT(*) as count FROM matches')).rows[0].count;
   res.render('index', { user: req.session.user || null, top, total, matches, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
 });
 
-app.get('/leaderboard', (req, res) => {
+app.get('/leaderboard', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
-  const players = db.prepare('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT ? OFFSET ?').all(limit, (page - 1) * limit);
-  const total = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+  const players = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
+  const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   res.render('leaderboard', { user: req.session.user || null, players, page, pages: Math.ceil(total / limit), total });
 });
 
-app.get('/profile/:id', (req, res) => {
-  const player = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+app.get('/profile/:id', async (req, res) => {
+  const player = (await db.query('SELECT * FROM users WHERE id = $1', [req.params.id])).rows[0];
   if (!player) return res.status(404).send('User not found');
-  const matchHistory = db.prepare(`
+  const matchHistory = (await db.query(`
     SELECT m.*, p1.username as p1_name, p2.username as p2_name
     FROM matches m
     JOIN users p1 ON m.player1_id = p1.id
     JOIN users p2 ON m.player2_id = p2.id
-    WHERE m.player1_id = ? OR m.player2_id = ?
+    WHERE m.player1_id = $1 OR m.player2_id = $2
     ORDER BY m.played_at DESC LIMIT 50
-  `).all(player.id, player.id);
+  `, [player.id, player.id])).rows;
   res.render('profile', { user: req.session.user || null, player, matchHistory, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
 });
 
-app.get('/admin', isAuth, isAdmin, (req, res) => {
-  const players = db.prepare('SELECT id, discord_id, username, elo, wins, losses, verified FROM users ORDER BY elo DESC').all();
+app.get('/admin', isAuth, isAdmin, async (req, res) => {
+  const players = (await db.query('SELECT id, discord_id, username, elo, wins, losses, verified FROM users ORDER BY elo DESC')).rows;
   res.render('admin', { user: req.session.user, players });
 });
 
-// ─── Discord OAuth ───
 app.get('/login', (req, res) => {
   const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.REDIRECT_URI)}&response_type=code&scope=identify`;
   res.redirect(url);
@@ -109,19 +106,19 @@ app.get('/auth/discord/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tok.access_token}` },
     }).then(r => r.json());
 
-    let user = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(du.id);
+    let user = (await db.query('SELECT * FROM users WHERE discord_id = $1', [du.id])).rows[0];
     if (!user) {
-      const info = db.prepare('INSERT INTO users (discord_id, username, avatar_url, verified) VALUES (?, ?, ?, 1)').run(
-        du.id, du.global_name || du.username,
-        `https://cdn.discordapp.com/avatars/${du.id}/${du.avatar}.png`
+      const result = await db.query(
+        'INSERT INTO users (discord_id, username, avatar_url, verified) VALUES ($1, $2, $3, 1) RETURNING *',
+        [du.id, du.global_name || du.username, `https://cdn.discordapp.com/avatars/${du.id}/${du.avatar}.png`]
       );
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+      user = result.rows[0];
     } else {
-      db.prepare('UPDATE users SET username = ?, avatar_url = ?, verified = 1 WHERE discord_id = ?').run(
+      await db.query('UPDATE users SET username = $1, avatar_url = $2, verified = 1 WHERE discord_id = $3', [
         du.global_name || du.username,
         `https://cdn.discordapp.com/avatars/${du.id}/${du.avatar}.png`,
         du.id
-      );
+      ]);
     }
     req.session.user = user;
     res.redirect('/');
@@ -130,25 +127,23 @@ app.get('/auth/discord/callback', async (req, res) => {
 
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
-// ─── API ───
-app.get('/api/leaderboard', (req, res) => {
-  res.json(db.prepare('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100').all());
+app.get('/api/leaderboard', async (req, res) => {
+  res.json((await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows);
 });
 
-app.post('/api/update-profile', isAuth, (req, res) => {
+app.post('/api/update-profile', isAuth, async (req, res) => {
   const { roblox_username, build, build_items } = req.body;
-  db.prepare('UPDATE users SET roblox_username = ?, build = ?, build_items = ? WHERE discord_id = ?').run(
+  await db.query('UPDATE users SET roblox_username = $1, build = $2, build_items = $3 WHERE discord_id = $4', [
     roblox_username || '', build || '', build_items || '', req.session.user.discord_id
-  );
-  req.session.user = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(req.session.user.discord_id);
+  ]);
+  req.session.user = (await db.query('SELECT * FROM users WHERE discord_id = $1', [req.session.user.discord_id])).rows[0];
   res.json({ success: true });
 });
 
-// ─── Bot Report API (called from bot.js) ───
-app.post('/api/match/result', (req, res) => {
+app.post('/api/match/result', async (req, res) => {
   const { p1_discord_id, p2_discord_id, winner_discord_id, winner_score, loser_score } = req.body;
-  const p1 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(p1_discord_id);
-  const p2 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(p2_discord_id);
+  const p1 = (await db.query('SELECT * FROM users WHERE discord_id = $1', [p1_discord_id])).rows[0];
+  const p2 = (await db.query('SELECT * FROM users WHERE discord_id = $1', [p2_discord_id])).rows[0];
   if (!p1 || !p2) return res.status(400).json({ error: 'User not found' });
 
   const wIsP1 = winner_discord_id === p1.discord_id;
@@ -157,34 +152,36 @@ app.post('/api/match/result', (req, res) => {
   const ws = winner_score || 5;
   const ls = loser_score || 0;
 
-  db.prepare('INSERT INTO matches (player1_id, player2_id, winner_id, player1_elo_before, player2_elo_before, player1_elo_change, player2_elo_change, winner_score, loser_score) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(p1.id, p2.id, wId, p1.elo, p2.elo, changeA, changeB, ws, ls);
+  await db.query(
+    'INSERT INTO matches (player1_id, player2_id, winner_id, player1_elo_before, player2_elo_before, player1_elo_change, player2_elo_change, winner_score, loser_score) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+    [p1.id, p2.id, wId, p1.elo, p2.elo, changeA, changeB, ws, ls]
+  );
 
-  db.prepare('UPDATE users SET elo = elo + ?, wins = wins + 1 WHERE id = ?').run(changeA, p1.id);
-  db.prepare('UPDATE users SET elo = elo + ?, losses = losses + 1 WHERE id = ?').run(changeB, p1.id);
-  db.prepare('UPDATE users SET elo = elo + ?, wins = wins + 1 WHERE id = ?').run(changeB, p2.id);
-  db.prepare('UPDATE users SET elo = elo + ?, losses = losses + 1 WHERE id = ?').run(changeA, p2.id);
+  await db.query('UPDATE users SET elo = elo + $1, wins = wins + 1 WHERE id = $2', [changeA, p1.id]);
+  await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1 WHERE id = $2', [changeB, p1.id]);
+  await db.query('UPDATE users SET elo = elo + $1, wins = wins + 1 WHERE id = $2', [changeB, p2.id]);
+  await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1 WHERE id = $2', [changeA, p2.id]);
 
-  const np1 = db.prepare('SELECT * FROM users WHERE id = ?').get(p1.id);
-  const np2 = db.prepare('SELECT * FROM users WHERE id = ?').get(p2.id);
+  const np1 = (await db.query('SELECT * FROM users WHERE id = $1', [p1.id])).rows[0];
+  const np2 = (await db.query('SELECT * FROM users WHERE id = $1', [p2.id])).rows[0];
   res.json({ success: true, p1: { elo_before: p1.elo, elo: np1.elo, change: changeA }, p2: { elo_before: p2.elo, elo: np2.elo, change: changeB }, winner: wIsP1 ? p1.username : p2.username, winner_score: ws, loser_score: ls });
 });
 
-// ─── Admin API ───
-app.post('/api/admin/update-user', isAuth, isAdmin, (req, res) => {
+app.post('/api/admin/update-user', isAuth, isAdmin, async (req, res) => {
   const { id, elo, wins, losses, build, roblox_username } = req.body;
-  db.prepare('UPDATE users SET elo = ?, wins = ?, losses = ?, build = ?, roblox_username = ? WHERE id = ?').run(elo, wins, losses, build || '', roblox_username || '', id);
+  await db.query('UPDATE users SET elo = $1, wins = $2, losses = $3, build = $4, roblox_username = $5 WHERE id = $6', [elo, wins, losses, build || '', roblox_username || '', id]);
   res.json({ success: true });
 });
 
-app.post('/api/admin/delete-user', isAuth, isAdmin, (req, res) => {
+app.post('/api/admin/delete-user', isAuth, isAdmin, async (req, res) => {
   const { id } = req.body;
-  db.prepare('DELETE FROM matches WHERE player1_id = ? OR player2_id = ?').run(id, id);
-  db.prepare('DELETE FROM users WHERE id = ?').run(id);
+  await db.query('DELETE FROM matches WHERE player1_id = $1 OR player2_id = $2', [id, id]);
+  await db.query('DELETE FROM users WHERE id = $1', [id]);
   res.json({ success: true });
 });
 
-// ─── Start ───
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`[Forsaken Tide] Server → http://localhost:${PORT}`);
+  await db.init();
   if (process.env.DISCORD_TOKEN) initBot();
 });
