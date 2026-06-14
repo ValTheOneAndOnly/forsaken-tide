@@ -77,6 +77,10 @@ app.get('/', async (req, res) => {
   res.render('index', { user: req.session.user || null, top, total, matches, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
 });
 
+app.get('/info', async (req, res) => {
+  res.render('info', { user: req.session.user || null, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
+});
+
 app.get('/leaderboard', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
