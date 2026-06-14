@@ -10,10 +10,10 @@ function initBot() {
   const GUILD_ID = process.env.GUILD_ID;
 
   const commands = [
-    new SlashCommandBuilder().setName('verify').setDescription('Get your verification link'),
-    new SlashCommandBuilder().setName('profile').setDescription('View a player\'s profile').addUserOption(o => o.setName('user').setDescription('User').setRequired(false)),
-    new SlashCommandBuilder().setName('leaderboard').setDescription('View top 10'),
-    new SlashCommandBuilder().setName('log').setDescription('Log a FT5 1v1 match')
+    new SlashCommandBuilder().setName('ftverify').setDescription('Get your verification link'),
+    new SlashCommandBuilder().setName('ftprofile').setDescription('View a player\'s profile').addUserOption(o => o.setName('user').setDescription('User').setRequired(false)),
+    new SlashCommandBuilder().setName('ftleaderboard').setDescription('View top 10'),
+    new SlashCommandBuilder().setName('ftlog').setDescription('Log a FT5 1v1 match')
       .addUserOption(o => o.setName('player1').setDescription('First player').setRequired(true))
       .addUserOption(o => o.setName('player2').setDescription('Second player').setRequired(true))
       .addUserOption(o => o.setName('winner').setDescription('Who won? (player1 or player2)').setRequired(true)),
@@ -34,7 +34,7 @@ function initBot() {
   client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
-    if (interaction.commandName === 'verify') {
+    if (interaction.commandName === 'ftverify') {
       const embed = new EmbedBuilder()
         .setTitle('⚓ Forsaken Tide — Verify')
         .setDescription(`Click below to join the leaderboard:\n\n[**Verify with Discord**](${SERVER_URL}/login)\n\nAfter logging in, set your Roblox username and build (Skilled or Normal) on your profile page.`)
@@ -43,10 +43,10 @@ function initBot() {
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    if (interaction.commandName === 'profile') {
+    if (interaction.commandName === 'ftprofile') {
       const target = interaction.options.getUser('user') || interaction.user;
       const user = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(target.id);
-      if (!user) return interaction.reply({ content: 'Not registered. Use `/verify`.', ephemeral: true });
+      if (!user)       return interaction.reply({ content: 'Not registered. Use `/ftverify`.', ephemeral: true });
       const rank = db.prepare('SELECT COUNT(*) as r FROM users WHERE elo > ?').get(user.elo).r + 1;
       const embed = new EmbedBuilder()
         .setTitle(user.username).setThumbnail(user.avatar_url || target.displayAvatarURL()).setColor(0xFFD700)
@@ -61,9 +61,9 @@ function initBot() {
       return interaction.reply({ embeds: [embed] });
     }
 
-    if (interaction.commandName === 'leaderboard') {
+    if (interaction.commandName === 'ftleaderboard') {
       const top = db.prepare('SELECT username, elo, wins, losses FROM users ORDER BY elo DESC LIMIT 10').all();
-      if (top.length === 0) return interaction.reply({ content: 'No players yet. Use `/verify` to join!', ephemeral: true });
+      if (top.length === 0) return interaction.reply({ content: 'No players yet. Use `/ftverify` to join!', ephemeral: true });
       const desc = top.map((p, i) => {
         const m = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
         return `${m} **${p.username}** — ${p.elo} ELO (${p.wins}W/${p.losses}L)`;
@@ -72,7 +72,7 @@ function initBot() {
       return interaction.reply({ embeds: [embed] });
     }
 
-    if (interaction.commandName === 'log') {
+    if (interaction.commandName === 'ftlog') {
       const p1User = interaction.options.getUser('player1');
       const p2User = interaction.options.getUser('player2');
       const winner = interaction.options.getUser('winner');
@@ -83,8 +83,8 @@ function initBot() {
 
       const p1 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(p1User.id);
       const p2 = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(p2User.id);
-      if (!p1) return interaction.reply({ content: `${p1User.username} is not registered. Use \`/verify\`.`, ephemeral: true });
-      if (!p2) return interaction.reply({ content: `${p2User.username} is not registered. Use \`/verify\`.`, ephemeral: true });
+      if (!p1) return interaction.reply({ content: `${p1User.username} is not registered. Use \`/ftverify\`.`, ephemeral: true });
+      if (!p2) return interaction.reply({ content: `${p2User.username} is not registered. Use \`/ftverify\`.`, ephemeral: true });
 
       const res = await fetch(`${SERVER_URL}/api/match/result`, {
         method: 'POST',
@@ -111,10 +111,10 @@ function initBot() {
         .setTitle('⚓ Forsaken Tide — Commands')
         .setColor(0xFFD700)
         .addFields(
-          { name: '/verify', value: 'Get a link to log in and join the leaderboard', inline: false },
-          { name: '/profile', value: 'View your stats (or mention someone to see theirs)', inline: false },
-          { name: '/leaderboard', value: 'View top 10 players', inline: false },
-          { name: '/log', value: 'Log a FT5 match: `/log player1:@p1 player2:@p2 winner:@winner`', inline: false },
+          { name: '/ftverify', value: 'Get a link to log in and join the leaderboard', inline: false },
+          { name: '/ftprofile', value: 'View your stats (or mention someone to see theirs)', inline: false },
+          { name: '/ftleaderboard', value: 'View top 10 players', inline: false },
+          { name: '/ftlog', value: 'Log a FT5 match: `/ftlog player1:@p1 player2:@p2 winner:@winner`', inline: false },
           { name: '/ftcommands', value: 'Show this list', inline: false },
         )
         .setFooter({ text: 'Forsaken Tide Leaderboard' });
