@@ -4,7 +4,7 @@ const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.POR
 
 function initBot() {
   const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
-  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+  const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
   const TOKEN = process.env.DISCORD_TOKEN;
   const CLIENT_ID = process.env.CLIENT_ID;
   const GUILD_ID = process.env.GUILD_ID;
@@ -19,10 +19,32 @@ function initBot() {
       .addUserOption(o => o.setName('winner').setDescription('Who won? (player1 or player2)').setRequired(true))
       .addIntegerOption(o => o.setName('loser_score').setDescription('Loser score (0-4)').setMinValue(0).setMaxValue(4).setRequired(true)),
     new SlashCommandBuilder().setName('ftcommands').setDescription('Show all Forsaken Tide commands'),
+    new SlashCommandBuilder().setName('ftsync').setDescription('Sync rank roles for all users or a specific user').addUserOption(o => o.setName('user').setDescription('User to sync').setRequired(false)),
 
   ];
 
   const rest = new REST({ version: '10' }).setToken(TOKEN);
+
+  const RANKS = ['C', 'B', 'A', 'S', 'X', 'Y', 'Z'];
+  function getRankFromElo(elo) {
+    if (elo >= 701) return 'Z';
+    if (elo >= 551) return 'Y';
+    if (elo >= 401) return 'X';
+    if (elo >= 350) return 'S';
+    if (elo >= 250) return 'A';
+    if (elo >= 100) return 'B';
+    return 'C';
+  }
+  async function syncRankRole(member, elo) {
+    if (!member) return;
+    const targetRank = getRankFromElo(elo);
+    const roles = await member.guild.roles.fetch();
+    const rankRoles = roles.filter(r => RANKS.includes(r.name));
+    const toRemove = rankRoles.filter(r => r.name !== targetRank);
+    const toAdd = rankRoles.find(r => r.name === targetRank);
+    await member.roles.remove(toRemove).catch(() => {});
+    if (toAdd) await member.roles.add(toAdd).catch(() => {});
+  }
 
   client.once('ready', async () => {
     console.log(`[Bot] Logged in as ${client.user.tag}`);
@@ -111,7 +133,36 @@ function initBot() {
           { name: p2.username, value: `${data.p2.elo_before} → ${data.p2.elo} (${data.p2.change > 0 ? '+' : ''}${data.p2.change})`, inline: true },
         )
         .setFooter({ text: 'Forsaken Tide Leaderboard' });
+      try {
+        const guild = await client.guilds.fetch(GUILD_ID);
+        const m1 = await guild.members.fetch(p1User.id).catch(() => null);
+        const m2 = await guild.members.fetch(p2User.id).catch(() => null);
+        if (m1) syncRankRole(m1, data.p1.elo);
+        if (m2) syncRankRole(m2, data.p2.elo);
+      } catch {}
       return interaction.reply({ embeds: [embed] });
+    }
+
+    if (interaction.commandName === 'ftsync') {
+      const target = interaction.options.getUser('user');
+      const guild = await client.guilds.fetch(GUILD_ID);
+      if (target) {
+        const member = await guild.members.fetch(target.id).catch(() => null);
+        if (!member) return interaction.reply({ content: 'User not found in server.', ephemeral: true });
+        const user = (await db.query('SELECT * FROM users WHERE discord_id = $1', [target.id])).rows[0];
+        if (!user) return interaction.reply({ content: 'Not registered.', ephemeral: true });
+        await syncRankRole(member, user.elo);
+        return interaction.reply({ content: `Synced ${target.username} → ${getRankFromElo(user.elo)}`, ephemeral: true });
+      }
+      await interaction.deferReply({ ephemeral: true });
+      const members = await guild.members.fetch();
+      const users = (await db.query('SELECT discord_id, elo FROM users')).rows;
+      let count = 0;
+      for (const u of users) {
+        const member = members.get(u.discord_id);
+        if (member) { await syncRankRole(member, u.elo); count++; }
+      }
+      return interaction.editReply({ content: `Synced ${count} members.` });
     }
 
     if (interaction.commandName === 'ftcommands') {
@@ -123,6 +174,7 @@ function initBot() {
           { name: '/ftprofile', value: 'View your stats (or mention someone to see theirs)', inline: false },
           { name: '/ftleaderboard', value: 'View top 10 players with ranks', inline: false },
           { name: '/ftlog', value: 'Log a FT5 match: `/ftlog player1:@p1 player2:@p2 winner:@winner loser_score:3`', inline: false },
+          { name: '/ftsync', value: 'Sync rank roles for all users or a specific user', inline: false },
           { name: '/ftcommands', value: 'Show this list', inline: false },
         )
         .setFooter({ text: 'Forsaken Tide Leaderboard' });
