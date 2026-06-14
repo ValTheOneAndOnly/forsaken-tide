@@ -25,7 +25,8 @@ function initBot() {
 
   const rest = new REST({ version: '10' }).setToken(TOKEN);
 
-  const RANKS = ['C', 'B', 'A', 'S', 'X', 'Y', 'Z'];
+  const RANKS = ['C Rank', 'B Rank', 'A Rank', 'S Rank', 'X Rank', 'Y Rank', 'Z Rank'];
+  const RANK_LETTERS = ['C', 'B', 'A', 'S', 'X', 'Y', 'Z'];
   function getRankFromElo(elo) {
     if (elo >= 701) return 'Z';
     if (elo >= 551) return 'Y';
@@ -35,13 +36,17 @@ function initBot() {
     if (elo >= 100) return 'B';
     return 'C';
   }
+  function getRankRoleName(rank) {
+    return rank + ' Rank';
+  }
   async function syncRankRole(member, elo) {
     if (!member) return;
     const targetRank = getRankFromElo(elo);
+    const targetRoleName = getRankRoleName(targetRank);
     const roles = await member.guild.roles.fetch();
     const rankRoles = roles.filter(r => RANKS.map(x => x.toLowerCase()).includes(r.name.toLowerCase()));
-    const toRemove = rankRoles.filter(r => r.name.toLowerCase() !== targetRank.toLowerCase());
-    const toAdd = rankRoles.find(r => r.name.toLowerCase() === targetRank.toLowerCase());
+    const toRemove = rankRoles.filter(r => r.name.toLowerCase() !== targetRoleName.toLowerCase());
+    const toAdd = rankRoles.find(r => r.name.toLowerCase() === targetRoleName.toLowerCase());
     await member.roles.remove(toRemove).catch(() => {});
     if (toAdd) await member.roles.add(toAdd).catch(() => {});
   }
