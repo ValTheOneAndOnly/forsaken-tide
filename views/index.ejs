@@ -41,7 +41,7 @@
         <% top.forEach((p, i) => { %>
           <tr>
             <td class="rank-cell rank-<%= i < 3 ? i + 1 : '' %>"><%= i + 1 %></td>
-            <td><div class="player-cell"><img class="player-avatar" src="<%= p.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png' %>"><div><a href="/profile/<%= p.id %>" class="player-name<%= admins.includes(p.discord_id) ? ' player-name-admin' : '' %>"><%= p.username %><% if (p.verified && !admins.includes(p.discord_id)) { %><span class="verified-badge">✓</span><% } %><% if (admins.includes(p.discord_id)) { %><span class="admin-badge"></span><% } %></a></div></div></td>
+            <td><div class="player-cell"><img class="player-avatar" src="<%= p.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png' %>"><div><a href="/profile/<%= p.id %>" class="player-name<%= admins.includes(p.discord_id) ? ' player-name-admin' : '' %>"><%= p.username %><% if (p.verified && !admins.includes(p.discord_id)) { %><span class="verified-badge">✓</span><% } %><% if (admins.includes(p.discord_id)) { %><span class="admin-badge">✓</span><% } %></a></div></div></td>
             <td><span class="rank-badge"><%= p.rank %></span></td>
             <td><span class="frac-badge">F<%= p.fraction %></span></td>
             <td class="player-build"><%= p.build || '—' %><%= p.build_items ? ' — ' + p.build_items : '' %></td>
