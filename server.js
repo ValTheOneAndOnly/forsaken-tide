@@ -233,6 +233,15 @@ app.post('/api/admin/delete-user', isAuth, isAdmin, async (req, res) => {
   }
 });
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
+app.use((err, req, res, next) => {
+  console.error('Express error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 app.listen(PORT, async () => {
   console.log(`[Forsaken Tide] Server → http://localhost:${PORT}`);
   await db.init();
