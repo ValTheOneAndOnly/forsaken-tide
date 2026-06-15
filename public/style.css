@@ -223,19 +223,8 @@ tbody td { padding: 12px 16px; font-size: 14px; }
 }
 
 .player-name:hover { color: #FFD700; }
-.player-name-admin {
-  background: linear-gradient(135deg, #3a0000, #cc0000, #3a0000, #ff1a1a);
-  background-size: 400% 400%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: adminShimmer 2s ease-in-out infinite;
-}
-@keyframes adminShimmer {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
+.player-name-admin,
+.player-name-admin:hover { color: #cc0000 !important; }
 
 .admin-badge {
   display: inline-flex;
