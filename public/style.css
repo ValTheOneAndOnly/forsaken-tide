@@ -225,16 +225,16 @@ tbody td { padding: 12px 16px; font-size: 14px; }
 .player-name:hover { color: #FFD700; }
 .player-name-admin,
 .player-name-admin:hover {
-  background: linear-gradient(270deg, #8B0000, #cc0000, #ff3333, #cc0000, #8B0000);
-  background-size: 400% 400%;
+  background: linear-gradient(90deg, #A10207, #5A0003, #0A050E, #5A0003, #A10207, #5A0003, #0A050E, #5A0003, #A10207);
+  background-size: 400% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: adminShimmer 3s linear infinite;
+  animation: adminWave 3s linear infinite;
 }
-@keyframes adminShimmer {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
+@keyframes adminWave {
+  0% { background-position: 0% 0%; }
+  100% { background-position: -100% 0%; }
 }
 
 .admin-badge {
