@@ -223,8 +223,19 @@ tbody td { padding: 12px 16px; font-size: 14px; }
 }
 
 .player-name:hover { color: #FFD700; }
-.player-name-admin { color: #FF4466 !important; }
-.player-name-admin:hover { color: #ff6b8a !important; }
+.player-name-admin {
+  background: linear-gradient(135deg, #8B0000, #CC0000, #8B0000, #660000);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: adminShimmer 4s ease-in-out infinite;
+}
+@keyframes adminShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 
 .admin-badge {
   display: inline-flex;
@@ -233,8 +244,8 @@ tbody td { padding: 12px 16px; font-size: 14px; }
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: rgba(255, 68, 102, 0.15);
-  color: #FF4466;
+  background: linear-gradient(135deg, #8B0000, #CC0000);
+  color: #fff;
   font-size: 10px;
   margin-left: 6px;
 }
