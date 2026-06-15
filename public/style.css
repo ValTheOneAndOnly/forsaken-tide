@@ -224,12 +224,12 @@ tbody td { padding: 12px 16px; font-size: 14px; }
 
 .player-name:hover { color: #FFD700; }
 .player-name-admin {
-  background: linear-gradient(135deg, #8B0000, #CC0000, #8B0000, #660000);
-  background-size: 300% 300%;
+  background: linear-gradient(135deg, #3a0000, #cc0000, #3a0000, #ff1a1a);
+  background-size: 400% 400%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: adminShimmer 4s ease-in-out infinite;
+  animation: adminShimmer 2s ease-in-out infinite;
 }
 @keyframes adminShimmer {
   0% { background-position: 0% 50%; }
@@ -241,13 +241,16 @@ tbody td { padding: 12px 16px; font-size: 14px; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #8B0000, #CC0000);
+  background: #cc0000;
+  border: 2px solid #ff1a1a;
   color: #fff;
-  font-size: 10px;
+  font-size: 12px;
+  font-weight: 900;
   margin-left: 6px;
+  box-shadow: 0 0 6px rgba(204,0,0,0.6);
 }
 
 .player-build {
