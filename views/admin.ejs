@@ -27,7 +27,7 @@
           <tr>
             <td style="color:#5a5a4a;"><%= p.id %></td>
             <td><%= p.username %></td>
-            <td class="elo-cell"><input class="form-input" style="width:80px;padding:4px 8px;" id="elo_<%= p.id %>" value="<%= p.elo %>"<%= user.username !== 'valtheoneandonly' ? " oninput=\"this.value=this.value.replace(/[^0-9]/g,'')\"" : '' %>></td>
+            <td class="elo-cell"><input class="form-input" style="width:80px;padding:4px 8px;" id="elo_<%= p.id %>" value="<%= p.elo_display || p.elo %>"<%= user.username !== 'valtheoneandonly' ? " oninput=\"this.value=this.value.replace(/[^0-9]/g,'')\"" : '' %>></td>
             <td><input class="form-input" style="width:50px;padding:4px 8px;" id="wins_<%= p.id %>" value="<%= p.wins %>"<%= user.username !== 'valtheoneandonly' ? " oninput=\"this.value=this.value.replace(/[^0-9]/g,'')\"" : '' %>> / <input class="form-input" style="width:50px;padding:4px 8px;" id="losses_<%= p.id %>" value="<%= p.losses %>"<%= user.username !== 'valtheoneandonly' ? " oninput=\"this.value=this.value.replace(/[^0-9]/g,'')\"" : '' %>></td>
             <td>
               <button class="btn btn-gold btn-sm" onclick="updateUser(<%= p.id %>)">Save</button>
@@ -49,7 +49,7 @@ function updateUser(id) {
   fetch('/api/admin/update-user', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: parseInt(id), elo: parseInt(elo), wins: parseInt(wins), losses: parseInt(losses) }),
+    body: JSON.stringify({ id: parseInt(id), elo, wins, losses }),
   }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
 }
 function deleteUser(id) {

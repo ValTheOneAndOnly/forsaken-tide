@@ -70,7 +70,7 @@ function isAdmin(req, res, next) {
 }
 
 app.get('/', async (req, res) => {
-  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
+  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
   const top = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   const matches = (await db.query('SELECT COUNT(*) as count FROM matches')).rows[0].count;
@@ -84,7 +84,7 @@ app.get('/info', async (req, res) => {
 app.get('/leaderboard', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
-  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
+  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
   const players = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   res.render('leaderboard', { user: req.session.user || null, players, page, pages: Math.ceil(total / limit), total, admins });
@@ -106,7 +106,7 @@ app.get('/profile/:id', async (req, res) => {
 });
 
 app.get('/admin', isAuth, isAdmin, async (req, res) => {
-  const rows = (await db.query('SELECT id, discord_id, username, elo, wins, losses, verified FROM users ORDER BY elo DESC')).rows;
+  const rows = (await db.query('SELECT id, discord_id, username, elo, elo_display, wins, losses, verified FROM users ORDER BY elo DESC')).rows;
   const players = rows.map(r => ({ ...r, rank: getRank(r.elo) }));
   res.render('admin', { user: req.session.user, players });
 });
@@ -160,7 +160,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
 app.get('/api/leaderboard', async (req, res) => {
-  const rows = (await db.query('SELECT id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
+  const rows = (await db.query('SELECT id, username, roblox_username, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
   res.json(rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) })));
 });
 
@@ -214,11 +214,16 @@ app.post('/api/admin/update-user', isAuth, isAdmin, async (req, res) => {
   try {
     const { id, elo, wins, losses, build, roblox_username } = req.body;
     if (req.session.user.username !== 'valtheoneandonly') {
-      if (!/^\d+$/.test(elo) || !/^\d+$/.test(wins) || !/^\d+$/.test(losses)) {
+      if (!/^\d+$/.test(String(elo)) || !/^\d+$/.test(String(wins)) || !/^\d+$/.test(String(losses))) {
         return res.status(400).json({ error: 'ELO, wins, and losses must be numeric' });
       }
+      await db.query('UPDATE users SET elo = $1, wins = $2, losses = $3, build = $4, roblox_username = $5 WHERE id = $6', [elo, wins, losses, build || '', roblox_username || '', id]);
+    } else {
+      const eloVal = /^\d+$/.test(String(elo)) ? elo : null;
+      const winsVal = /^\d+$/.test(String(wins)) ? wins : 0;
+      const lossesVal = /^\d+$/.test(String(losses)) ? losses : 0;
+      await db.query('UPDATE users SET elo = COALESCE($1, elo), elo_display = CASE WHEN $1 IS NULL THEN $2 ELSE \'\' END, wins = $3, losses = $4, build = $5, roblox_username = $6 WHERE id = $7', [eloVal, elo, winsVal, lossesVal, build || '', roblox_username || '', id]);
     }
-    await db.query('UPDATE users SET elo = $1, wins = $2, losses = $3, build = $4, roblox_username = $5 WHERE id = $6', [elo, wins, losses, build || '', roblox_username || '', id]);
     res.json({ success: true });
   } catch (e) {
     console.error('Admin update error:', e);

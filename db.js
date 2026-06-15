@@ -12,6 +12,7 @@ db.init = async () => {
       username TEXT NOT NULL DEFAULT 'Unknown',
       roblox_username TEXT DEFAULT '',
       elo INTEGER NOT NULL DEFAULT 0,
+      elo_display TEXT DEFAULT '',
       wins INTEGER NOT NULL DEFAULT 0,
       losses INTEGER NOT NULL DEFAULT 0,
       build TEXT DEFAULT '',
@@ -21,6 +22,7 @@ db.init = async () => {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS elo_display TEXT DEFAULT ''`);
   await db.query(`
     CREATE TABLE IF NOT EXISTS matches (
       id SERIAL PRIMARY KEY,

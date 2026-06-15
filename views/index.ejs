@@ -45,7 +45,7 @@
             <td><span class="rank-badge"><%= p.rank %></span></td>
             <td><span class="frac-badge">F<%= p.fraction %></span></td>
             <td class="player-build"><%= p.build || '—' %><%= p.build_items ? ' — ' + p.build_items : '' %></td>
-            <td class="elo-cell"><%= p.elo %></td>
+            <td class="elo-cell"><%= p.elo_display || p.elo %></td>
             <td><%= p.wins %>W / <%= p.losses %>L</td>
             <td class="wr-cell"><%= p.wins + p.losses > 0 ? Math.round(p.wins / (p.wins + p.losses) * 100) : 0 %>%</td>
           </tr>

@@ -83,7 +83,7 @@ function initBot() {
       const embed = new EmbedBuilder()
         .setTitle(user.username).setThumbnail(user.avatar_url || target.displayAvatarURL()).setColor(0xFFD700)
         .addFields(
-          { name: '◆ ELO', value: `**${user.elo}**`, inline: true },
+          { name: '◆ ELO', value: `**${user.elo_display || user.elo}**`, inline: true },
           { name: '◈ Rank', value: `**${userRank}**`, inline: true },
           { name: '▣ Fraction', value: `**F${userFrac}**`, inline: true },
           { name: '◉ W/L', value: `${user.wins}W / ${user.losses}L`, inline: true },
@@ -96,14 +96,14 @@ function initBot() {
     }
 
     if (interaction.commandName === 'ftleaderboard') {
-      const result = await db.query('SELECT username, elo, wins, losses FROM users ORDER BY elo DESC LIMIT 10');
+      const result = await db.query('SELECT username, elo, elo_display, wins, losses FROM users ORDER BY elo DESC LIMIT 10');
       const top = result.rows;
       if (top.length === 0) return interaction.reply({ content: 'No players yet. Use `/ftverify` to join!', ephemeral: true });
       const desc = top.map((p, i) => {
         const f = p.elo >= 551 ? 3 : p.elo >= 350 ? 2 : 1;
         const r = p.elo >= 701 ? 'Z' : p.elo >= 551 ? 'Y' : p.elo >= 401 ? 'X' : p.elo >= 350 ? 'S' : p.elo >= 250 ? 'A' : p.elo >= 100 ? 'B' : 'C';
         const m = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        return `${m} **${p.username}** [${r} F${f}] — ${p.elo} ELO (${p.wins}W/${p.losses}L)`;
+        return `${m} **${p.username}** [${r} F${f}] — ${p.elo_display || p.elo} ELO (${p.wins}W/${p.losses}L)`;
       }).join('\n');
       const embed = new EmbedBuilder().setTitle('⚓ Forsaken Tide — Top 10').setDescription(desc).setColor(0xFFD700).setFooter({ text: 'Full leaderboard at ' + SERVER_URL });
       return interaction.reply({ embeds: [embed] });
