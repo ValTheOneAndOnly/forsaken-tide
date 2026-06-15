@@ -74,7 +74,7 @@ app.get('/', async (req, res) => {
   const top = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   const matches = (await db.query('SELECT COUNT(*) as count FROM matches')).rows[0].count;
-  res.render('index', { user: req.session.user || null, top, total, matches, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
+  res.render('index', { user: req.session.user || null, top, total, matches, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false, admins });
 });
 
 app.get('/info', async (req, res) => {
@@ -87,7 +87,7 @@ app.get('/leaderboard', async (req, res) => {
   const rows = (await db.query('SELECT id, discord_id, username, roblox_username, elo, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
   const players = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
-  res.render('leaderboard', { user: req.session.user || null, players, page, pages: Math.ceil(total / limit), total });
+  res.render('leaderboard', { user: req.session.user || null, players, page, pages: Math.ceil(total / limit), total, admins });
 });
 
 app.get('/profile/:id', async (req, res) => {
@@ -102,7 +102,7 @@ app.get('/profile/:id', async (req, res) => {
     WHERE m.player1_id = $1 OR m.player2_id = $2
     ORDER BY m.played_at DESC LIMIT 50
   `, [player.id, player.id])).rows;
-  res.render('profile', { user: req.session.user || null, player, matchHistory, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
+  res.render('profile', { user: req.session.user || null, player, matchHistory, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false, admins });
 });
 
 app.get('/admin', isAuth, isAdmin, async (req, res) => {
