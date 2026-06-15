@@ -27,8 +27,8 @@
           <tr>
             <td style="color:#5a5a4a;"><%= p.id %></td>
             <td><%= p.username %></td>
-            <td class="elo-cell"><input class="form-input" style="width:80px;padding:4px 8px;" id="elo_<%= p.id %>" value="<%= p.elo %>" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
-            <td><input class="form-input" style="width:50px;padding:4px 8px;" id="wins_<%= p.id %>" value="<%= p.wins %>" oninput="this.value=this.value.replace(/[^0-9]/g,'')"> / <input class="form-input" style="width:50px;padding:4px 8px;" id="losses_<%= p.id %>" value="<%= p.losses %>" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
+            <td class="elo-cell"><input class="form-input" style="width:80px;padding:4px 8px;" id="elo_<%= p.id %>" value="<%= p.elo %>"<%= user.username !== 'valtheoneandonly' ? " oninput=\"this.value=this.value.replace(/[^0-9]/g,'')\"" : '' %>></td>
+            <td><input class="form-input" style="width:50px;padding:4px 8px;" id="wins_<%= p.id %>" value="<%= p.wins %>"<%= user.username !== 'valtheoneandonly' ? " oninput=\"this.value=this.value.replace(/[^0-9]/g,'')\"" : '' %>> / <input class="form-input" style="width:50px;padding:4px 8px;" id="losses_<%= p.id %>" value="<%= p.losses %>"<%= user.username !== 'valtheoneandonly' ? " oninput=\"this.value=this.value.replace(/[^0-9]/g,'')\"" : '' %>></td>
             <td>
               <button class="btn btn-gold btn-sm" onclick="updateUser(<%= p.id %>)">Save</button>
               <button class="btn btn-sm" style="background:rgba(255,68,102,0.15);color:#FF4466;border:1px solid rgba(255,68,102,0.3);" onclick="deleteUser(<%= p.id %>)">Delete</button>

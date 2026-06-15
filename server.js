@@ -213,6 +213,11 @@ app.post('/api/match/result', async (req, res) => {
 app.post('/api/admin/update-user', isAuth, isAdmin, async (req, res) => {
   try {
     const { id, elo, wins, losses, build, roblox_username } = req.body;
+    if (req.session.user.username !== 'valtheoneandonly') {
+      if (!/^\d+$/.test(elo) || !/^\d+$/.test(wins) || !/^\d+$/.test(losses)) {
+        return res.status(400).json({ error: 'ELO, wins, and losses must be numeric' });
+      }
+    }
     await db.query('UPDATE users SET elo = $1, wins = $2, losses = $3, build = $4, roblox_username = $5 WHERE id = $6', [elo, wins, losses, build || '', roblox_username || '', id]);
     res.json({ success: true });
   } catch (e) {
