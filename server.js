@@ -211,16 +211,26 @@ app.post('/api/match/result', async (req, res) => {
 });
 
 app.post('/api/admin/update-user', isAuth, isAdmin, async (req, res) => {
-  const { id, elo, wins, losses, build, roblox_username } = req.body;
-  await db.query('UPDATE users SET elo = $1, wins = $2, losses = $3, build = $4, roblox_username = $5 WHERE id = $6', [elo, wins, losses, build || '', roblox_username || '', id]);
-  res.json({ success: true });
+  try {
+    const { id, elo, wins, losses, build, roblox_username } = req.body;
+    await db.query('UPDATE users SET elo = $1, wins = $2, losses = $3, build = $4, roblox_username = $5 WHERE id = $6', [elo, wins, losses, build || '', roblox_username || '', id]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Admin update error:', e);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
 });
 
 app.post('/api/admin/delete-user', isAuth, isAdmin, async (req, res) => {
-  const { id } = req.body;
-  await db.query('DELETE FROM matches WHERE player1_id = $1 OR player2_id = $2', [id, id]);
-  await db.query('DELETE FROM users WHERE id = $1', [id]);
-  res.json({ success: true });
+  try {
+    const { id } = req.body;
+    await db.query('DELETE FROM matches WHERE player1_id = $1 OR player2_id = $2', [id, id]);
+    await db.query('DELETE FROM users WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Admin delete error:', e);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
 });
 
 app.listen(PORT, async () => {
