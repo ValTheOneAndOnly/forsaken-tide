@@ -17,7 +17,8 @@ function initBot() {
       .addUserOption(o => o.setName('player1').setDescription('First player').setRequired(true))
       .addUserOption(o => o.setName('player2').setDescription('Second player').setRequired(true))
       .addUserOption(o => o.setName('winner').setDescription('Who won? (player1 or player2)').setRequired(true))
-      .addIntegerOption(o => o.setName('loser_score').setDescription('Loser score (0-4)').setMinValue(0).setMaxValue(4).setRequired(true)),
+      .addIntegerOption(o => o.setName('winner_score').setDescription('Winner score (5 for normal FT5, up to 10 for combined)').setMinValue(1).setMaxValue(10).setRequired(false))
+      .addIntegerOption(o => o.setName('loser_score').setDescription('Loser score (0-4 for FT5, up to 9 for combined)').setMinValue(0).setMaxValue(9).setRequired(true)),
     new SlashCommandBuilder().setName('ftcommands').setDescription('Show all Forsaken Tide commands'),
     new SlashCommandBuilder().setName('ftsync').setDescription('Sync rank roles for all users or a specific user').addUserOption(o => o.setName('user').setDescription('User to sync').setRequired(false)),
   ];
@@ -89,6 +90,7 @@ function initBot() {
           { name: '◉ W/L', value: `${user.wins}W / ${user.losses}L`, inline: true },
           { name: '■ Win Rate', value: `${user.wins + user.losses > 0 ? Math.round(user.wins / (user.wins + user.losses) * 100) : 0}%`, inline: true },
           { name: '⛓ Roblox', value: user.roblox_username || 'Not set', inline: true },
+          { name: '🌍 Region', value: user.region || 'Not set', inline: true },
           { name: '⚔ Build', value: user.build ? (user.build + (user.build_items ? ' — ' + user.build_items : '')) : 'Not set', inline: true },
           { name: '# Rank', value: `#${rank}`, inline: true },
         );
@@ -114,6 +116,7 @@ function initBot() {
       const p2User = interaction.options.getUser('player2');
       const winner = interaction.options.getUser('winner');
       const loserScore = interaction.options.getInteger('loser_score');
+      const winnerScore = interaction.options.getInteger('winner_score') || 5;
       if (!p1User || !p2User || !winner || loserScore === null) return interaction.reply({ content: 'Missing arguments.', ephemeral: true });
       if (p1User.id === p2User.id) return interaction.reply({ content: 'Players must be different.', ephemeral: true });
       if (winner.id !== p1User.id && winner.id !== p2User.id) return interaction.reply({ content: 'Winner must be player1 or player2.', ephemeral: true });
@@ -130,14 +133,15 @@ function initBot() {
       const res = await fetch(`${SERVER_URL}/api/match/result`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p1_discord_id: p1User.id, p2_discord_id: p2User.id, winner_discord_id: winner.id, winner_score: 5, loser_score: loserScore }),
+        body: JSON.stringify({ p1_discord_id: p1User.id, p2_discord_id: p2User.id, winner_discord_id: winner.id, winner_score: winnerScore, loser_score: loserScore }),
       });
       const data = await res.json();
       if (!data.success) return interaction.reply({ content: 'Error: ' + (data.error || 'Unknown'), ephemeral: true });
 
+      const regionNote = p1.region && p2.region && p1.region !== p2.region ? ` 🌍 Cross-region (${p1.region} vs ${p2.region})` : '';
       const embed = new EmbedBuilder()
-        .setTitle('⚔ Match Logged')
-        .setDescription(`**${data.winner}** won 5-${data.loser_score}`)
+        .setTitle('⚔ Match Logged' + regionNote)
+        .setDescription(`**${data.winner}** won ${data.winner_score}-${data.loser_score}`)
         .setColor(winner.id === p1User.id ? 0x00FF88 : 0xFF4466)
         .addFields(
           { name: p1.username, value: `${data.p1.elo_before} → ${data.p1.elo} (${data.p1.change > 0 ? '+' : ''}${data.p1.change})`, inline: true },
@@ -188,7 +192,7 @@ function initBot() {
           { name: '/ftverify', value: 'Get a link to log in and join the leaderboard', inline: false },
           { name: '/ftprofile', value: 'View your stats (or mention someone to see theirs)', inline: false },
           { name: '/ftleaderboard', value: 'View top 10 players with ranks', inline: false },
-          { name: '/ftlog', value: 'Log a FT5 match: `/ftlog player1:@p1 player2:@p2 winner:@winner loser_score:3`', inline: false },
+          { name: '/ftlog', value: 'Log a FT5 match. Cross-region: add combined winner_score (e.g. `/ftlog ... winner_score:10 loser_score:7`)', inline: false },
           { name: '/ftsync', value: 'Sync rank roles for all users or a specific user', inline: false },
           { name: '/ftcommands', value: 'Show this list', inline: false },
         )

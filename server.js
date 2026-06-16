@@ -70,7 +70,7 @@ function isAdmin(req, res, next) {
 }
 
 app.get('/', async (req, res) => {
-  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
+  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, region, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
   const top = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   const matches = (await db.query('SELECT COUNT(*) as count FROM matches')).rows[0].count;
@@ -84,7 +84,7 @@ app.get('/info', async (req, res) => {
 app.get('/leaderboard', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
-  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
+  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, region, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
   const players = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   res.render('leaderboard', { user: req.session.user || null, players, page, pages: Math.ceil(total / limit), total, admins });
@@ -106,7 +106,7 @@ app.get('/profile/:id', async (req, res) => {
 });
 
 app.get('/admin', isAuth, isAdmin, async (req, res) => {
-  const rows = (await db.query('SELECT id, discord_id, username, elo, elo_display, wins, losses, verified FROM users ORDER BY elo DESC')).rows;
+  const rows = (await db.query('SELECT id, discord_id, username, region, elo, elo_display, wins, losses, verified FROM users ORDER BY elo DESC')).rows;
   const players = rows.map(r => ({ ...r, rank: getRank(r.elo) }));
   res.render('admin', { user: req.session.user, players });
 });
@@ -160,14 +160,14 @@ app.get('/auth/discord/callback', async (req, res) => {
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
 app.get('/api/leaderboard', async (req, res) => {
-  const rows = (await db.query('SELECT id, username, roblox_username, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
+  const rows = (await db.query('SELECT id, username, roblox_username, region, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
   res.json(rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) })));
 });
 
 app.post('/api/update-profile', isAuth, async (req, res) => {
-  const { roblox_username, build, build_items } = req.body;
-  await db.query('UPDATE users SET roblox_username = $1, build = $2, build_items = $3 WHERE discord_id = $4', [
-    roblox_username || '', build || '', build_items || '', req.session.user.discord_id
+  const { roblox_username, region, build, build_items } = req.body;
+  await db.query('UPDATE users SET roblox_username = $1, region = $2, build = $3, build_items = $4 WHERE discord_id = $5', [
+    roblox_username || '', region || '', build || '', build_items || '', req.session.user.discord_id
   ]);
   req.session.user = (await db.query('SELECT * FROM users WHERE discord_id = $1', [req.session.user.discord_id])).rows[0];
   res.json({ success: true });
@@ -191,8 +191,8 @@ app.post('/api/match/result', async (req, res) => {
 
   const wIsP1 = winner_discord_id === p1.discord_id;
   const wId = wIsP1 ? p1.id : p2.id;
-  const ws = winner_score || 5;
-  const ls = loser_score || 0;
+  const ws = Math.min(winner_score || 5, 10);
+  const ls = Math.min(loser_score || 0, 9);
   const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1, ls);
 
   await db.query(
