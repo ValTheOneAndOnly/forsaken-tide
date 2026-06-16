@@ -47,7 +47,7 @@
     <div class="settings-section">
       <div class="profile-section-title">◆ Edit Profile</div>
       <div class="form-group"><label>Roblox Username</label><input class="form-input" id="robloxInput" value="<%= player.roblox_username || '' %>" placeholder="Your Roblox username"></div>
-      <div class="form-group"><label>Region</label><select class="form-input" id="regionInput"><option value="" <%= !player.region ? 'selected' : '' %>>Select Region</option><option value="NA" <%= player.region === 'NA' ? 'selected' : '' %>>NA</option><option value="EU" <%= player.region === 'EU' ? 'selected' : '' %>>EU</option><option value="Asia" <%= player.region === 'Asia' ? 'selected' : '' %>>Asia</option></select></div>
+      <div class="form-group"><label>Region (auto-detected from Discord roles)</label><div class="form-input" style="background:#1a1a1a;padding:10px 14px;border-radius:8px;color:#ccc"><%= player.region || 'No region role assigned' %></div></div>
       <div class="form-group"><label>Build Type</label><select class="form-input" id="buildInput"><option value="Normal" <%= player.build === 'Normal' ? 'selected' : '' %>>Normal</option><option value="Skilled" <%= player.build === 'Skilled' ? 'selected' : '' %>>Skilled</option></select></div>
       <div class="form-group"><label>Items / Build</label><input class="form-input" id="buildItemsInput" value="<%= player.build_items || '' %>" placeholder="e.g. Shark + Godhuman + Soul Guitar"></div>
       <button class="btn btn-gold" onclick="saveProfile()">Save</button>

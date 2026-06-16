@@ -3,7 +3,7 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const db = require('./db');
-const { initBot } = require('./bot');
+const { initBot, syncRegionForUser } = require('./bot');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -153,8 +153,9 @@ app.get('/auth/discord/callback', async (req, res) => {
       ]);
     }
     req.session.user = user;
+    syncRegionForUser(du.id);
     res.redirect('/');
-  } catch { res.redirect('/'); }
+  } catch (e) { console.error('Login error:', e); res.redirect('/'); }
 });
 
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
@@ -165,9 +166,9 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 app.post('/api/update-profile', isAuth, async (req, res) => {
-  const { roblox_username, region, build, build_items } = req.body;
-  await db.query('UPDATE users SET roblox_username = $1, region = $2, build = $3, build_items = $4 WHERE discord_id = $5', [
-    roblox_username || '', region || '', build || '', build_items || '', req.session.user.discord_id
+  const { roblox_username, build, build_items } = req.body;
+  await db.query('UPDATE users SET roblox_username = $1, build = $2, build_items = $3 WHERE discord_id = $4', [
+    roblox_username || '', build || '', build_items || '', req.session.user.discord_id
   ]);
   req.session.user = (await db.query('SELECT * FROM users WHERE discord_id = $1', [req.session.user.discord_id])).rows[0];
   res.json({ success: true });

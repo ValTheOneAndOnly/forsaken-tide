@@ -2,12 +2,16 @@ require('dotenv').config();
 const db = require('./db');
 const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3000}`;
 
+const REGION_ROLES = { 'EU': 'EU', 'Europe': 'EU', 'AS': 'Asia', 'Asia': 'Asia', 'NA': 'NA', 'North America': 'NA' };
+const GUILD_ID = process.env.GUILD_ID;
+let botClient = null;
+
 function initBot() {
   const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
   const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+  botClient = client;
   const TOKEN = process.env.DISCORD_TOKEN;
   const CLIENT_ID = process.env.CLIENT_ID;
-  const GUILD_ID = process.env.GUILD_ID;
 
   const commands = [
     new SlashCommandBuilder().setName('ftverify').setDescription('Get your verification link'),
@@ -24,7 +28,7 @@ function initBot() {
       .addIntegerOption(o => o.setName('r2_ws').setDescription('Winner score on 2nd region FT5 (e.g. 5)').setMinValue(0).setMaxValue(5).setRequired(false))
       .addIntegerOption(o => o.setName('r2_ls').setDescription('Loser score on 2nd region FT5 (e.g. 4)').setMinValue(0).setMaxValue(5).setRequired(false)),
     new SlashCommandBuilder().setName('ftcommands').setDescription('Show all Forsaken Tide commands'),
-    new SlashCommandBuilder().setName('ftsync').setDescription('Sync rank roles for all users or a specific user').addUserOption(o => o.setName('user').setDescription('User to sync').setRequired(false)),
+    new SlashCommandBuilder().setName('ftsync').setDescription('Sync rank roles & region for all users or a specific user').addUserOption(o => o.setName('user').setDescription('User to sync').setRequired(false)),
   ];
 
   const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -54,6 +58,16 @@ function initBot() {
     await member.roles.remove(toRemove).catch(() => {});
     if (toAdd) await member.roles.add(toAdd).catch(() => {});
   }
+  async function syncRegion(member) {
+    if (!member) return;
+    const roles = member.roles.cache;
+    let region = '';
+    for (const [, role] of roles) {
+      const mapped = REGION_ROLES[role.name];
+      if (mapped) { region = mapped; break; }
+    }
+    await db.query('UPDATE users SET region = $1 WHERE discord_id = $2', [region, member.id]).catch(() => {});
+  }
 
   client.once('ready', async () => {
     console.log(`[Bot] Logged in as ${client.user.tag}`);
@@ -61,6 +75,16 @@ function initBot() {
       await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands.map(c => c.toJSON()) });
       console.log('[Bot] Commands registered');
     } catch (e) { console.error('[Bot] Command registration error:', e); }
+    try {
+      const guild = await client.guilds.fetch(GUILD_ID);
+      const members = await guild.members.fetch();
+      const users = (await db.query('SELECT discord_id FROM users')).rows;
+      for (const u of users) {
+        const member = members.get(u.discord_id);
+        if (member) await syncRegion(member);
+      }
+      console.log('[Bot] Regions synced');
+    } catch (e) { console.error('[Bot] Region sync error:', e); }
   });
 
   client.on('interactionCreate', async interaction => {
@@ -166,8 +190,8 @@ function initBot() {
           const guild = await client.guilds.fetch(GUILD_ID);
           const m1 = await guild.members.fetch(p1User.id).catch(() => null);
           const m2 = await guild.members.fetch(p2User.id).catch(() => null);
-          if (m1) await syncRankRole(m1, data.p1.elo);
-          if (m2) await syncRankRole(m2, data.p2.elo);
+          if (m1) { await syncRankRole(m1, data.p1.elo); await syncRegion(m1); }
+          if (m2) { await syncRankRole(m2, data.p2.elo); await syncRegion(m2); }
         } catch (e) { console.error('[Bot] Role sync error:', e); }
       });
     }
@@ -184,6 +208,7 @@ function initBot() {
         const user = (await db.query('SELECT * FROM users WHERE discord_id = $1', [target.id])).rows[0];
         if (!user) return interaction.reply({ content: 'Not registered.', ephemeral: true });
         await syncRankRole(member, user.elo);
+        await syncRegion(member);
         return interaction.reply({ content: `Synced ${target.username} → ${getRankFromElo(user.elo)} | Found roles: ${foundRoles || 'NONE'} | All roles: ${allRoleNames}`, ephemeral: true });
       }
       await interaction.deferReply({ ephemeral: true });
@@ -192,9 +217,9 @@ function initBot() {
       let count = 0;
       for (const u of users) {
         const member = members.get(u.discord_id);
-        if (member) { await syncRankRole(member, u.elo); count++; }
+        if (member) { await syncRankRole(member, u.elo); await syncRegion(member); count++; }
       }
-      return interaction.editReply({ content: `Synced ${count} members. | Found roles: ${foundRoles || 'NONE'} | All roles: ${allRoleNames}` });
+      return interaction.editReply({ content: `Synced ${count} members (rank + region). | Found roles: ${foundRoles || 'NONE'} | All roles: ${allRoleNames}` });
     }
 
     if (interaction.commandName === 'ftcommands') {
@@ -206,7 +231,7 @@ function initBot() {
           { name: '/ftprofile', value: 'View your stats (or mention someone to see theirs)', inline: false },
           { name: '/ftleaderboard', value: 'View top 10 players with ranks', inline: false },
           { name: '/ftlog', value: 'Log a FT5 match. Cross-region: add combined winner_score (e.g. `/ftlog ... winner_score:10 loser_score:7`)', inline: false },
-          { name: '/ftsync', value: 'Sync rank roles for all users or a specific user', inline: false },
+          { name: '/ftsync', value: 'Sync rank roles & region for all users or a specific user', inline: false },
           { name: '/ftcommands', value: 'Show this list', inline: false },
         )
         .setFooter({ text: 'Forsaken Tide Leaderboard' });
@@ -217,4 +242,20 @@ function initBot() {
   client.login(TOKEN).catch(e => console.error('[Bot] Login error:', e));
 }
 
-module.exports = { initBot };
+async function syncRegionForUser(discordId) {
+  if (!botClient) return;
+  try {
+    const guild = await botClient.guilds.fetch(GUILD_ID);
+    const member = await guild.members.fetch(discordId).catch(() => null);
+    if (!member) return;
+    const roles = member.roles.cache;
+    let region = '';
+    for (const [, role] of roles) {
+      const mapped = REGION_ROLES[role.name];
+      if (mapped) { region = mapped; break; }
+    }
+    await db.query('UPDATE users SET region = $1 WHERE discord_id = $2', [region, discordId]).catch(() => {});
+  } catch (e) { console.error('[Bot] Region sync error for user:', e); }
+}
+
+module.exports = { initBot, syncRegionForUser };
