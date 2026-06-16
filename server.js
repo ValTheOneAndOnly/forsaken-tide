@@ -200,10 +200,13 @@ app.post('/api/match/result', async (req, res) => {
     [p1.id, p2.id, wId, p1.elo, p2.elo, changeA, changeB, ws, ls]
   );
 
-  await db.query('UPDATE users SET elo = elo + $1, wins = wins + 1 WHERE id = $2', [changeA, p1.id]);
-  await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1 WHERE id = $2', [changeB, p1.id]);
-  await db.query('UPDATE users SET elo = elo + $1, wins = wins + 1 WHERE id = $2', [changeB, p2.id]);
-  await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1 WHERE id = $2', [changeA, p2.id]);
+  if (wIsP1) {
+    await db.query('UPDATE users SET elo = elo + $1, wins = wins + 1 WHERE id = $2', [changeA, p1.id]);
+    await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1 WHERE id = $2', [changeB, p2.id]);
+  } else {
+    await db.query('UPDATE users SET elo = elo + $1, wins = wins + 1 WHERE id = $2', [changeB, p2.id]);
+    await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1 WHERE id = $2', [changeA, p1.id]);
+  }
 
   const np1 = (await db.query('SELECT * FROM users WHERE id = $1', [p1.id])).rows[0];
   const np2 = (await db.query('SELECT * FROM users WHERE id = $1', [p2.id])).rows[0];
