@@ -85,6 +85,9 @@ function initBot() {
       }
       console.log('[Bot] Regions synced');
     } catch (e) { console.error('[Bot] Region sync error:', e); }
+    client.on('guildMemberUpdate', (oldMember, newMember) => {
+      syncRegion(newMember);
+    });
   });
 
   client.on('interactionCreate', async interaction => {
