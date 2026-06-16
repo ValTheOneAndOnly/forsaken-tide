@@ -17,8 +17,12 @@ function initBot() {
       .addUserOption(o => o.setName('player1').setDescription('First player').setRequired(true))
       .addUserOption(o => o.setName('player2').setDescription('Second player').setRequired(true))
       .addUserOption(o => o.setName('winner').setDescription('Who won? (player1 or player2)').setRequired(true))
-      .addIntegerOption(o => o.setName('winner_score').setDescription('Winner score (5 for normal FT5, up to 10 for combined)').setMinValue(1).setMaxValue(10).setRequired(false))
-      .addIntegerOption(o => o.setName('loser_score').setDescription('Loser score (0-4 for FT5, up to 9 for combined)').setMinValue(0).setMaxValue(9).setRequired(true)),
+      .addIntegerOption(o => o.setName('winner_score').setDescription('Total winner score (5 for FT5, up to 10 for combined)').setMinValue(1).setMaxValue(10).setRequired(false))
+      .addIntegerOption(o => o.setName('loser_score').setDescription('Total loser score (0-4 for FT5, up to 9 for combined)').setMinValue(0).setMaxValue(9).setRequired(true))
+      .addIntegerOption(o => o.setName('r1_ws').setDescription('Winner score on 1st region FT5 (e.g. 5)').setMinValue(0).setMaxValue(5).setRequired(false))
+      .addIntegerOption(o => o.setName('r1_ls').setDescription('Loser score on 1st region FT5 (e.g. 3)').setMinValue(0).setMaxValue(5).setRequired(false))
+      .addIntegerOption(o => o.setName('r2_ws').setDescription('Winner score on 2nd region FT5 (e.g. 5)').setMinValue(0).setMaxValue(5).setRequired(false))
+      .addIntegerOption(o => o.setName('r2_ls').setDescription('Loser score on 2nd region FT5 (e.g. 4)').setMinValue(0).setMaxValue(5).setRequired(false)),
     new SlashCommandBuilder().setName('ftcommands').setDescription('Show all Forsaken Tide commands'),
     new SlashCommandBuilder().setName('ftsync').setDescription('Sync rank roles for all users or a specific user').addUserOption(o => o.setName('user').setDescription('User to sync').setRequired(false)),
   ];
@@ -117,6 +121,10 @@ function initBot() {
       const winner = interaction.options.getUser('winner');
       const loserScore = interaction.options.getInteger('loser_score');
       const winnerScore = interaction.options.getInteger('winner_score') || 5;
+      const r1ws = interaction.options.getInteger('r1_ws');
+      const r1ls = interaction.options.getInteger('r1_ls');
+      const r2ws = interaction.options.getInteger('r2_ws');
+      const r2ls = interaction.options.getInteger('r2_ls');
       if (!p1User || !p2User || !winner || loserScore === null) return interaction.reply({ content: 'Missing arguments.', ephemeral: true });
       if (p1User.id === p2User.id) return interaction.reply({ content: 'Players must be different.', ephemeral: true });
       if (winner.id !== p1User.id && winner.id !== p2User.id) return interaction.reply({ content: 'Winner must be player1 or player2.', ephemeral: true });
@@ -138,10 +146,15 @@ function initBot() {
       const data = await res.json();
       if (!data.success) return interaction.reply({ content: 'Error: ' + (data.error || 'Unknown'), ephemeral: true });
 
-      const regionNote = p1.region && p2.region && p1.region !== p2.region ? ` 🌍 Cross-region (${p1.region} vs ${p2.region})` : '';
+      const isCrossRegion = p1.region && p2.region && p1.region !== p2.region;
+      const regionNote = isCrossRegion ? ` 🌍 Cross-region (${p1.region} vs ${p2.region})` : '';
+      let desc = `**${data.winner}** won ${data.winner_score}-${data.loser_score}`;
+      if (isCrossRegion && r1ws !== null && r1ls !== null && r2ws !== null && r2ls !== null) {
+        desc += `\nFT5 on ${p1.region}: ${r1ws}-${r1ls} | FT5 on ${p2.region}: ${r2ws}-${r2ls}`;
+      }
       const embed = new EmbedBuilder()
         .setTitle('⚔ Match Logged' + regionNote)
-        .setDescription(`**${data.winner}** won ${data.winner_score}-${data.loser_score}`)
+        .setDescription(desc)
         .setColor(winner.id === p1User.id ? 0x00FF88 : 0xFF4466)
         .addFields(
           { name: p1.username, value: `${data.p1.elo_before} → ${data.p1.elo} (${data.p1.change > 0 ? '+' : ''}${data.p1.change})`, inline: true },
