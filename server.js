@@ -21,9 +21,10 @@ app.use(session({
   cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-function calcElo(ratingA, ratingB, winnerIsA, loserScore) {
+function calcElo(ratingA, ratingB, winnerIsA, winnerScore, loserScore) {
   const K = 8;
-  const multiplier = loserScore === 4 ? 0.5 : 1;
+  const diff = winnerScore - loserScore;
+  const multiplier = diff <= 1 ? 0.5 : 1;
   const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
   const expectedB = 1 / (1 + Math.pow(10, (ratingA - ratingB) / 400));
   let changeA, changeB;
@@ -194,7 +195,7 @@ app.post('/api/match/result', async (req, res) => {
   const wId = wIsP1 ? p1.id : p2.id;
   const ws = Math.min(winner_score || 5, 10);
   const ls = Math.min(loser_score || 0, 9);
-  const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1, ls);
+  const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1, ws, ls);
 
   await db.query(
     'INSERT INTO matches (player1_id, player2_id, winner_id, player1_elo_before, player2_elo_before, player1_elo_change, player2_elo_change, winner_score, loser_score) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
