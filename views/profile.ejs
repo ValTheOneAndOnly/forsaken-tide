@@ -23,7 +23,7 @@
 
 <section class="profile">
   <div class="profile-header">
-    <img class="profile-avatar" src="<%= player.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png' %>">
+    <div class="avatar-container" style="flex-shrink:0"><img class="profile-avatar" src="<%= player.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png' %>"><% if (player.region) { %><span class="region-flag" style="bottom:0;right:0;font-size:9px"><%= player.region %></span><% } %></div>
     <div>
       <div class="profile-name">
         <span class="<%= admins.includes(player.discord_id) ? 'player-name-admin' : '' %>"><%= player.username %></span><% if (player.verified && !admins.includes(player.discord_id)) { %><span class="verified-badge" style="display:inline-flex;vertical-align:middle;">✓</span><% } %><% if (admins.includes(player.discord_id)) { %><span class="admin-badge">✓</span><% } %>

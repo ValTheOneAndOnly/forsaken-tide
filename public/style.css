@@ -209,11 +209,32 @@ tbody td { padding: 12px 16px; font-size: 14px; }
   gap: 10px;
 }
 
+.avatar-container {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
 .player-avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
   border: 2px solid rgba(255, 215, 0, 0.15);
+  display: block;
+}
+.region-flag {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  font-size: 8px;
+  font-weight: 800;
+  background: #111;
+  color: #aaa;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1.5px solid #333;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .player-name {

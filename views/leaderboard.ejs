@@ -30,7 +30,7 @@
         <% players.forEach((p, i) => { const rank = (page - 1) * 50 + i + 1; %>
           <tr>
             <td class="rank-cell rank-<%= rank <= 3 ? rank : '' %>"><%= rank %></td>
-            <td><div class="player-cell"><img class="player-avatar" src="<%= p.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png' %>"><div><a href="/profile/<%= p.id %>" class="player-name<%= admins.includes(p.discord_id) ? ' player-name-admin' : '' %>"><%= p.username %><% if (p.verified && !admins.includes(p.discord_id)) { %><span class="verified-badge">✓</span><% } %><% if (admins.includes(p.discord_id)) { %><span class="admin-badge">✓</span><% } %></a></div></div></td>
+            <td><div class="player-cell"><div class="avatar-container"><img class="player-avatar" src="<%= p.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png' %>"><% if (p.region) { %><span class="region-flag"><%= p.region %></span><% } %></div><div><a href="/profile/<%= p.id %>" class="player-name<%= admins.includes(p.discord_id) ? ' player-name-admin' : '' %>"><%= p.username %><% if (p.verified && !admins.includes(p.discord_id)) { %><span class="verified-badge">✓</span><% } %><% if (admins.includes(p.discord_id)) { %><span class="admin-badge">✓</span><% } %></a></div></div></td>
             <td><span class="rank-badge"><%= p.rank %></span></td>
             <td><span class="frac-badge">F<%= p.fraction %></span></td>
             <td><%= p.region || '—' %></td>
