@@ -60,7 +60,7 @@ function initBot() {
     try {
       await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands.map(c => c.toJSON()) });
       console.log('[Bot] Commands registered');
-    } catch {}
+    } catch (e) { console.error('[Bot] Command registration error:', e); }
   });
 
   client.on('interactionCreate', async interaction => {
