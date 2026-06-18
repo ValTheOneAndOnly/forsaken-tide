@@ -296,6 +296,11 @@ app.post('/api/admin/delete-match', isAuth, isAdmin, async (req, res) => {
 app.get('/api/admin/backfill-elo-history', async (req, res) => {
   if (req.query.secret !== 'mitja-backfill') return res.status(403).json({ error: 'bad secret' });
   try {
+    // Deduplicate first
+    await db.query(`DELETE FROM elo_history WHERE id NOT IN (SELECT MIN(id) FROM elo_history GROUP BY user_id, recorded_at)`);
+    // Create unique index if missing
+    await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_unique ON elo_history (user_id, recorded_at)`);
+    // Backfill from matches
     const matches = (await db.query('SELECT * FROM matches ORDER BY played_at ASC')).rows;
     let count = 0;
     for (const m of matches) {
