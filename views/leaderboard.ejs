@@ -24,9 +24,9 @@
   <div class="section-title">⚔ Full Leaderboard <span><%= total %> players</span></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>#</th><th>Player</th><th>Rank</th><th>Fraction</th><th>Region</th><th>Build</th><th>ELO</th><th>W/L</th><th>Win Rate</th></tr></thead>
+      <thead><tr><th>#</th><th>Player</th><th>Rank</th><th>Fraction</th><th>Region</th><th>Build</th><th>ELO</th><th>W/L</th><th>Streak</th><th>Win Rate</th></tr></thead>
       <tbody>
-        <% if (players.length === 0) { %><tr><td colspan="9" style="text-align:center;padding:40px;color:#5a5a4a;">No players yet.</td></tr><% } %>
+        <% if (players.length === 0) { %><tr><td colspan="10" style="text-align:center;padding:40px;color:#5a5a4a;">No players yet.</td></tr><% } %>
         <% players.forEach((p, i) => { const rank = (page - 1) * 50 + i + 1; %>
           <tr>
             <td class="rank-cell rank-<%= rank <= 3 ? rank : '' %>"><%= rank %></td>
@@ -37,6 +37,7 @@
             <td class="player-build"><%= p.build || '—' %><%= p.build_items ? ' — ' + p.build_items : '' %></td>
             <td class="elo-cell"><%= p.elo_display || p.elo %></td>
             <td><%= p.wins %>W / <%= p.losses %>L</td>
+            <td class="streak-cell"><%= p.current_streak > 0 ? '🔥' + p.current_streak : '—' %></td>
             <td class="wr-cell"><%= p.wins + p.losses > 0 ? Math.round(p.wins / (p.wins + p.losses) * 100) : 0 %>%</td>
           </tr>
         <% }) %>

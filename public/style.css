@@ -657,6 +657,9 @@ tbody td { padding: 12px 16px; font-size: 14px; }
   display: flex; gap: 10px; justify-content: flex-end;
 }
 
+.streak-cell { font-weight: 700; font-size: 13px; }
+#eloChart { border-radius: 8px; }
+
 .match-row-full td { font-size: 13px; }
 .match-score { font-weight: 700; color: #FFD700; }
 

@@ -25,6 +25,9 @@
 <section class="hero">
   <h1>FORSAKEN TIDE</h1>
   <p>Blox Fruits Competitive 1v1 Leaderboard — Rise through the ranks</p>
+  <% if (activeSeason) { %>
+    <div style="margin-bottom:16px"><span style="background:rgba(255,215,0,0.1);padding:6px 18px;border-radius:20px;font-size:13px;font-weight:600;color:#FFD700;border:1px solid rgba(255,215,0,0.2)">◈ <%= activeSeason.name %><% if (activeSeason.is_preparation) { %><span style="color:#5a5a4a;font-weight:400;margin-left:6px">— Preparation Season</span><% } %></span></div>
+  <% } %>
   <div class="hero-stats">
     <div class="stat"><div class="stat-value"><%= total %></div><div class="stat-label">Players</div></div>
     <div class="stat"><div class="stat-value"><%= matches %></div><div class="stat-label">Matches</div></div>
@@ -36,9 +39,9 @@
   <div class="section-title">⚔ Leaderboard <span>top 100</span></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>#</th><th>Player</th><th>Rank</th><th>Fraction</th><th>Region</th><th>Build</th><th>ELO</th><th>W/L</th><th>Win Rate</th></tr></thead>
+      <thead><tr><th>#</th><th>Player</th><th>Rank</th><th>Fraction</th><th>Region</th><th>Build</th><th>ELO</th><th>W/L</th><th>Streak</th><th>Win Rate</th></tr></thead>
       <tbody>
-        <% if (top.length === 0) { %><tr><td colspan="9" style="text-align:center;padding:40px;color:#5a5a4a;">No players yet. Login with Discord to join!</td></tr><% } %>
+          <% if (top.length === 0) { %><tr><td colspan="10" style="text-align:center;padding:40px;color:#5a5a4a;">No players yet. Login with Discord to join!</td></tr><% } %>
         <% top.forEach((p, i) => { %>
           <tr>
             <td class="rank-cell rank-<%= i < 3 ? i + 1 : '' %>"><%= i + 1 %></td>
@@ -49,6 +52,7 @@
             <td class="player-build"><%= p.build || '—' %><%= p.build_items ? ' — ' + p.build_items : '' %></td>
             <td class="elo-cell"><%= p.elo_display || p.elo %></td>
             <td><%= p.wins %>W / <%= p.losses %>L</td>
+            <td class="streak-cell"><%= p.current_streak > 0 ? '🔥' + p.current_streak : '—' %></td>
             <td class="wr-cell"><%= p.wins + p.losses > 0 ? Math.round(p.wins / (p.wins + p.losses) * 100) : 0 %>%</td>
           </tr>
         <% }) %>

@@ -75,7 +75,8 @@ app.get('/', async (req, res) => {
   const top = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   const matches = (await db.query('SELECT COUNT(*) as count FROM matches')).rows[0].count;
-  res.render('index', { user: req.session.user || null, top, total, matches, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false, admins });
+  const activeSeason = (await db.query('SELECT * FROM seasons WHERE is_active = true LIMIT 1')).rows[0] || null;
+  res.render('index', { user: req.session.user || null, top, total, matches, activeSeason, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false, admins });
 });
 
 app.get('/info', async (req, res) => {
@@ -122,7 +123,8 @@ app.get('/profile/:id', async (req, res) => {
     WHERE m.player1_id = $1 OR m.player2_id = $2
     ORDER BY m.played_at DESC LIMIT 50
   `, [player.id, player.id])).rows;
-  res.render('profile', { user: req.session.user || null, player, matchHistory, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false, admins });
+  const activeSeason = (await db.query('SELECT * FROM seasons WHERE is_active = true LIMIT 1')).rows[0] || null;
+  res.render('profile', { user: req.session.user || null, player, matchHistory, activeSeason, admin: process.env.ADMIN_ID, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false, admins });
 });
 
 app.get('/admin', isAuth, isAdmin, async (req, res) => {
@@ -196,6 +198,7 @@ app.post('/api/update-profile', isAuth, async (req, res) => {
 
 app.post('/api/match/result', async (req, res) => {
   const { p1_discord_id, p2_discord_id, winner_discord_id, winner_score, loser_score } = req.body;
+  const activeSeason = (await db.query('SELECT * FROM seasons WHERE is_active = true LIMIT 1')).rows[0];
   const p1 = (await db.query('SELECT * FROM users WHERE discord_id = $1', [p1_discord_id])).rows[0];
   const p2 = (await db.query('SELECT * FROM users WHERE discord_id = $1', [p2_discord_id])).rows[0];
   if (!p1 || !p2) return res.status(400).json({ error: 'User not found' });
@@ -217,20 +220,20 @@ app.post('/api/match/result', async (req, res) => {
   const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1, ws, ls);
 
   await db.query(
-    'INSERT INTO matches (player1_id, player2_id, winner_id, player1_elo_before, player2_elo_before, player1_elo_change, player2_elo_change, winner_score, loser_score) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-    [p1.id, p2.id, wId, p1.elo, p2.elo, changeA, changeB, ws, ls]
+    'INSERT INTO matches (player1_id, player2_id, winner_id, player1_elo_before, player2_elo_before, player1_elo_change, player2_elo_change, winner_score, loser_score, season_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+    [p1.id, p2.id, wId, p1.elo, p2.elo, changeA, changeB, ws, ls, activeSeason ? activeSeason.id : null]
   );
 
   if (wIsP1) {
-    await db.query('UPDATE users SET elo = elo + $1, wins = wins + 1 WHERE id = $2', [changeA, p1.id]);
-    await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1 WHERE id = $2', [changeB, p2.id]);
+    await db.query('UPDATE users SET elo = elo + $1, wins = wins + 1, current_streak = current_streak + 1, max_streak = GREATEST(max_streak, current_streak + 1) WHERE id = $2', [changeA, p1.id]);
+    await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1, current_streak = 0 WHERE id = $2', [changeB, p2.id]);
   } else {
-    await db.query('UPDATE users SET elo = elo + $1, wins = wins + 1 WHERE id = $2', [changeB, p2.id]);
-    await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1 WHERE id = $2', [changeA, p1.id]);
+    await db.query('UPDATE users SET elo = elo + $1, wins = wins + 1, current_streak = current_streak + 1, max_streak = GREATEST(max_streak, current_streak + 1) WHERE id = $2', [changeB, p2.id]);
+    await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1, current_streak = 0 WHERE id = $2', [changeA, p1.id]);
   }
 
-  const np1 = (await db.query('SELECT * FROM users WHERE id = $1', [p1.id])).rows[0];
-  const np2 = (await db.query('SELECT * FROM users WHERE id = $1', [p2.id])).rows[0];
+  await db.query('INSERT INTO elo_history (user_id, elo, season_id) VALUES ($1, $2, $3), ($4, $5, $6)', [p1.id, np1.elo, activeSeason ? activeSeason.id : null, p2.id, np2.elo, activeSeason ? activeSeason.id : null]);
+
   res.json({ success: true, p1: { elo_before: p1.elo, elo: np1.elo, change: changeA }, p2: { elo_before: p2.elo, elo: np2.elo, change: changeB }, winner: wIsP1 ? p1.username : p2.username, winner_score: ws, loser_score: ls });
 });
 
@@ -286,6 +289,24 @@ app.post('/api/admin/delete-match', isAuth, isAdmin, async (req, res) => {
     console.error('Match delete error:', e);
     res.status(500).json({ error: 'Failed to delete match' });
   }
+});
+
+app.get('/api/elo-history/:userId', async (req, res) => {
+  try {
+    const rows = (await db.query(
+      'SELECT elo, recorded_at FROM elo_history WHERE user_id = $1 ORDER BY recorded_at ASC LIMIT 200',
+      [req.params.userId]
+    )).rows;
+    res.json(rows);
+  } catch (e) {
+    console.error('ELO history error:', e);
+    res.status(500).json({ error: 'Failed to fetch ELO history' });
+  }
+});
+
+app.get('/api/active-season', async (req, res) => {
+  const s = (await db.query('SELECT * FROM seasons WHERE is_active = true LIMIT 1')).rows[0];
+  res.json(s || null);
 });
 
 app.post('/api/admin/update-user', isAuth, isAdmin, async (req, res) => {
