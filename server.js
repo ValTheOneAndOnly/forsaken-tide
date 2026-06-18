@@ -296,8 +296,8 @@ app.post('/api/admin/delete-match', isAuth, isAdmin, async (req, res) => {
 app.get('/api/admin/backfill-elo-history', async (req, res) => {
   if (req.query.secret !== 'mitja-backfill') return res.status(403).json({ error: 'bad secret' });
   try {
-    // Deduplicate first
-    await db.query(`DELETE FROM elo_history WHERE id NOT IN (SELECT MIN(id) FROM elo_history GROUP BY user_id, recorded_at)`);
+    // Deduplicate (keep lowest id per user+recorded_at)
+    await db.query(`DELETE FROM elo_history WHERE id IN (SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id, recorded_at ORDER BY id) as rn FROM elo_history) t WHERE rn > 1)`);
     // Create unique index if missing
     await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_unique ON elo_history (user_id, recorded_at)`);
     // Backfill from matches
