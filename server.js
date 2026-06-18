@@ -293,7 +293,28 @@ app.post('/api/admin/delete-match', isAuth, isAdmin, async (req, res) => {
   }
 });
 
-app.post('/api/admin/backfill-elo-history', isAuth, isAdmin, async (req, res) => {
+app.get('/api/admin/backfill-elo-history', async (req, res) => {
+  if (req.query.secret !== 'mitja-backfill') return res.status(403).json({ error: 'bad secret' });
+  try {
+    const matches = (await db.query('SELECT * FROM matches ORDER BY played_at ASC')).rows;
+    let count = 0;
+    for (const m of matches) {
+      const p1Elo = m.player1_elo_before + m.player1_elo_change;
+      const p2Elo = m.player2_elo_before + m.player2_elo_change;
+      try {
+        await db.query(
+          'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1, $2, $3, $4), ($5, $6, $7, $8) ON CONFLICT (user_id, recorded_at) DO NOTHING',
+          [m.player1_id, p1Elo, m.season_id, m.played_at, m.player2_id, p2Elo, m.season_id, m.played_at]
+        );
+        count += 2;
+      } catch(e) { console.error('Backfill row error:', e.message); }
+    }
+    res.json({ success: true, inserted: count });
+  } catch (e) {
+    console.error('Backfill error:', e);
+    res.status(500).json({ error: 'Failed to backfill ELO history' });
+  }
+});
   try {
     const matches = (await db.query(
       `SELECT m.*, u1.elo as p1_elo_before, u2.elo as p2_elo_before FROM matches m
