@@ -105,7 +105,7 @@ app.get('/matches', (req, res, next) => {
 app.get('/leaderboard', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
-  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, region, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
+  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, region, elo, elo_display, wins, losses, current_streak, max_streak, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT $1 OFFSET $2', [limit, (page - 1) * limit])).rows;
   const players = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   res.render('leaderboard', { user: req.session.user || null, players, page, pages: Math.ceil(total / limit), total, admins });
@@ -183,7 +183,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
 app.get('/api/leaderboard', async (req, res) => {
-  const rows = (await db.query('SELECT id, username, roblox_username, region, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
+  const rows = (await db.query('SELECT id, username, roblox_username, region, elo, elo_display, wins, losses, current_streak, max_streak, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
   res.json(rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) })));
 });
 
