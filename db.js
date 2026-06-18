@@ -30,19 +30,6 @@ db.init = async () => {
   await db.query(`UPDATE users SET current_streak = 0 WHERE current_streak IS NULL`);
   await db.query(`UPDATE users SET max_streak = 0 WHERE max_streak IS NULL`);
 
-  // Backfill elo_history from existing matches (idempotent via ON CONFLICT DO NOTHING)
-  try {
-    const matches = (await db.query('SELECT * FROM matches ORDER BY played_at ASC')).rows;
-    for (const m of matches) {
-      const p1Elo = m.player1_elo_before + m.player1_elo_change;
-      const p2Elo = m.player2_elo_before + m.player2_elo_change;
-      await db.query(
-        'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1, $2, $3, $4), ($5, $6, $7, $8) ON CONFLICT DO NOTHING',
-        [m.player1_id, p1Elo, m.season_id, m.played_at, m.player2_id, p2Elo, m.season_id, m.played_at]
-      );
-    }
-  } catch (e) { console.error('Backfill elo_history error:', e.message); }
-
   await db.query(`
     CREATE TABLE IF NOT EXISTS seasons (
       id SERIAL PRIMARY KEY,
@@ -64,8 +51,23 @@ db.init = async () => {
       recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  await db.query(`ALTER TABLE elo_history ADD COLUMN IF NOT EXISTS elo_history_unique_key TEXT UNIQUE DEFAULT ''`);
   await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_unique ON elo_history (user_id, recorded_at)`);
+
+  // Remove duplicate elo_history rows (keep oldest per user+timestamp)
+  try { await db.query(`DELETE FROM elo_history WHERE id NOT IN (SELECT MIN(id) FROM elo_history GROUP BY user_id, recorded_at)`); } catch(e) {}
+
+  // Backfill elo_history from existing matches
+  try {
+    const matches = (await db.query('SELECT * FROM matches ORDER BY played_at ASC')).rows;
+    for (const m of matches) {
+      const p1Elo = m.player1_elo_before + m.player1_elo_change;
+      const p2Elo = m.player2_elo_before + m.player2_elo_change;
+      await db.query(
+        'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1, $2, $3, $4), ($5, $6, $7, $8) ON CONFLICT (user_id, recorded_at) DO NOTHING',
+        [m.player1_id, p1Elo, m.season_id, m.played_at, m.player2_id, p2Elo, m.season_id, m.played_at]
+      );
+    }
+  } catch (e) { console.error('Backfill elo_history error:', e.message); }
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS matches (
