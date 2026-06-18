@@ -152,6 +152,31 @@ fetch('/api/elo-history/' + <%= player.id %>)
     function x(i) { return vals.length === 1 ? cx : pad.left + (i / (vals.length - 1)) * cw; }
     function y(v) { return pad.top + ch - ((v - min) / range) * ch; }
 
+    // Hover tooltip
+    const tip = document.createElement('div');
+    tip.style.cssText = 'position:absolute;background:#101019;border:1px solid rgba(255,215,0,0.3);border-radius:6px;padding:6px 10px;font-size:12px;color:#FFD700;pointer-events:none;display:none;z-index:10;white-space:nowrap;font-weight:600';
+    canvas.parentElement.style.position = 'relative';
+    canvas.parentElement.appendChild(tip);
+    canvas.addEventListener('mousemove', (e) => {
+      const cr = canvas.getBoundingClientRect();
+      const mx = e.clientX - cr.left;
+      let closest = 0, minDist = Infinity;
+      for (let i = 0; i < vals.length; i++) {
+        const d = Math.abs(x(i) - mx);
+        if (d < minDist) { minDist = d; closest = i; }
+      }
+      const cxPt = x(closest);
+      if (Math.abs(cxPt - mx) < 20) {
+        tip.style.display = 'block';
+        tip.style.left = (cxPt + 10) + 'px';
+        tip.style.top = (y(vals[closest]) - 30) + 'px';
+        tip.textContent = vals[closest] + ' ELO' + (data[closest].recorded_at ? ' — ' + new Date(data[closest].recorded_at).toLocaleDateString() : '');
+      } else {
+        tip.style.display = 'none';
+      }
+    });
+    canvas.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+
     // Grid lines
     ctx.strokeStyle = 'rgba(255,215,0,0.06)';
     ctx.lineWidth = 1;
