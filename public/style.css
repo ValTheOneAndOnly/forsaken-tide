@@ -621,6 +621,42 @@ tbody td { padding: 12px 16px; font-size: 14px; }
 }
 
 /* ─── Responsive ─── */
+.btn-edit { background:rgba(0,255,136,0.1);color:#00FF88;border:1px solid rgba(0,255,136,0.2); }
+.btn-edit:hover { background:rgba(0,255,136,0.2); }
+.btn-delete { background:rgba(255,68,102,0.15);color:#FF4466;border:1px solid rgba(255,68,102,0.3); }
+.btn-delete:hover { background:rgba(255,68,102,0.25); }
+
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: #101019;
+  border: 1px solid rgba(255,215,0,0.1);
+  border-radius: 14px;
+  padding: 28px;
+  width: 380px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.modal-title {
+  font-size: 18px; font-weight: 800; color: #e8e4d8;
+  margin-bottom: 20px;
+}
+
+.modal-body { margin-bottom: 24px; }
+
+.modal-body .form-group { margin-bottom: 14px; }
+.modal-body .form-group:last-child { margin-bottom: 0; }
+
+.modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+
 .match-row-full td { font-size: 13px; }
 .match-score { font-weight: 700; color: #FFD700; }
 
