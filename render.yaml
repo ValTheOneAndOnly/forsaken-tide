@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: forsaken-tide
+    runtime: node
+    repo: https://github.com/ValTheOneAndOnly/forsaken-tide
+    branch: master
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: CLIENT_ID
+        sync: false
+      - key: CLIENT_SECRET
+        sync: false
+      - key: REDIRECT_URI
+        value: https://forsaken-tide.onrender.com/auth/discord/callback
+      - key: ADMIN_ID
+        sync: false
+      - key: GUILD_ID
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: SERVER_URL
+        value: https://forsaken-tide.onrender.com
+      - key: DATABASE_URL
+        sync: false

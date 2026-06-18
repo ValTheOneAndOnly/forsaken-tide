@@ -621,6 +621,9 @@ tbody td { padding: 12px 16px; font-size: 14px; }
 }
 
 /* ─── Responsive ─── */
+.match-row-full td { font-size: 13px; }
+.match-score { font-weight: 700; color: #FFD700; }
+
 @media (max-width: 768px) {
   .nav { padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
   .hero h1 { font-size: 32px; }

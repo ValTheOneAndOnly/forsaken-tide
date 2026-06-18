@@ -82,6 +82,22 @@ app.get('/info', async (req, res) => {
   res.render('info', { user: req.session.user || null, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
 });
 
+app.get('/matches', async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = 50;
+  const rows = (await db.query(`
+    SELECT m.*, p1.username as p1_name, p2.username as p2_name,
+           w.username as winner_name
+    FROM matches m
+    JOIN users p1 ON m.player1_id = p1.id
+    JOIN users p2 ON m.player2_id = p2.id
+    JOIN users w ON m.winner_id = w.id
+    ORDER BY m.played_at DESC LIMIT $1 OFFSET $2
+  `, [limit, (page - 1) * limit])).rows;
+  const total = (await db.query('SELECT COUNT(*) as count FROM matches')).rows[0].count;
+  res.render('matches', { user: req.session.user || null, matches: rows, page, pages: Math.ceil(total / limit), total, admins, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
+});
+
 app.get('/leaderboard', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
@@ -213,6 +229,60 @@ app.post('/api/match/result', async (req, res) => {
   const np1 = (await db.query('SELECT * FROM users WHERE id = $1', [p1.id])).rows[0];
   const np2 = (await db.query('SELECT * FROM users WHERE id = $1', [p2.id])).rows[0];
   res.json({ success: true, p1: { elo_before: p1.elo, elo: np1.elo, change: changeA }, p2: { elo_before: p2.elo, elo: np2.elo, change: changeB }, winner: wIsP1 ? p1.username : p2.username, winner_score: ws, loser_score: ls });
+});
+
+app.post('/api/admin/update-match', isAuth, isAdmin, async (req, res) => {
+  try {
+    const { id, winner_score, loser_score } = req.body;
+    if (!/^\d+$/.test(String(winner_score)) || !/^\d+$/.test(String(loser_score))) {
+      return res.status(400).json({ error: 'Scores must be numeric' });
+    }
+    const ws = Math.min(parseInt(winner_score), 10);
+    const ls = Math.min(parseInt(loser_score), 9);
+    const match = (await db.query('SELECT * FROM matches WHERE id = $1', [id])).rows[0];
+    if (!match) return res.status(404).json({ error: 'Match not found' });
+
+    const p1 = (await db.query('SELECT * FROM users WHERE id = $1', [match.player1_id])).rows[0];
+    const p2 = (await db.query('SELECT * FROM users WHERE id = $1', [match.player2_id])).rows[0];
+
+    await db.query(
+      'UPDATE matches SET winner_score = $1, loser_score = $2 WHERE id = $3',
+      [ws, ls, id]
+    );
+
+    const wIsP1 = match.winner_id === match.player1_id;
+    const oldWs = match.winner_score;
+    const oldLs = match.loser_score;
+
+    if (oldWs !== ws || oldLs !== ls) {
+      const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1, ws, ls);
+      if (wIsP1) {
+        await db.query('UPDATE users SET elo = elo + $1 WHERE id = $2', [changeA - match.player1_elo_change, p1.id]);
+        await db.query('UPDATE users SET elo = elo + $1 WHERE id = $2', [changeB - match.player2_elo_change, p2.id]);
+      } else {
+        await db.query('UPDATE users SET elo = elo + $1 WHERE id = $2', [changeB - match.player1_elo_change, p1.id]);
+        await db.query('UPDATE users SET elo = elo + $1 WHERE id = $2', [changeA - match.player2_elo_change, p2.id]);
+      }
+      await db.query('UPDATE matches SET player1_elo_change = $1, player2_elo_change = $2 WHERE id = $3',
+        [wIsP1 ? changeA : changeB, wIsP1 ? changeB : changeA, id]);
+    }
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Match update error:', e);
+    res.status(500).json({ error: 'Failed to update match' });
+  }
+});
+
+app.post('/api/admin/delete-match', isAuth, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.body;
+    await db.query('DELETE FROM matches WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Match delete error:', e);
+    res.status(500).json({ error: 'Failed to delete match' });
+  }
 });
 
 app.post('/api/admin/update-user', isAuth, isAdmin, async (req, res) => {

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Matches — Forsaken Tide</title><link rel="stylesheet" href="/style.css"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>"></head>
+<body>
+<div class="bg"></div>
+<nav class="nav">
+  <div class="nav-logo">FORSAKEN TIDE <span>matches</span></div>
+  <div class="nav-links">
+    <a href="/">Leaderboard</a>
+    <a href="/matches" class="active">Matches</a>
+    <a href="/info">Info</a>
+    <% if (user) { %>
+      <a href="/profile/<%= user.id %>">Profile</a>
+      <% if (isAdmin) { %><a href="/admin">Admin</a><% } %>
+      <div class="nav-user">
+        <img class="nav-avatar" src="<%= user.avatar_url %>"><span class="nav-username"><%= user.username %></span>
+        <a href="/logout" class="btn btn-outline btn-sm">Logout</a>
+      </div>
+    <% } else { %>
+      <a href="/login" class="btn btn-gold">◆ Login with Discord</a>
+    <% } %>
+  </div>
+</nav>
+
+<section class="leaderboard-section" style="padding-top:40px;">
+  <div class="section-title">◉ All Matches <span><%= total %> total</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Player 1</th><th>Player 2</th><th>Winner</th><th>Score</th><th>ELO Changes</th><th>Date</th><% if (isAdmin) { %><th>Actions</th><% } %></tr></thead>
+      <tbody>
+        <% if (matches.length === 0) { %><tr><td colspan="<%= isAdmin ? 8 : 7 %>" style="text-align:center;padding:40px;color:#5a5a4a;">No matches recorded yet.</td></tr><% } %>
+        <% matches.forEach((m, i) => { %>
+          <tr class="match-row-full">
+            <td style="color:#5a5a4a;"><%= (page - 1) * 50 + i + 1 %></td>
+            <td class="<%= m.winner_id === m.player1_id ? 'match-winner' : 'match-loser' %>"><%= m.p1_name %></td>
+            <td class="<%= m.winner_id === m.player2_id ? 'match-winner' : 'match-loser' %>"><%= m.p2_name %></td>
+            <td><span style="color:#FFD700;font-weight:700"><%= m.winner_name %></span></td>
+            <td class="match-score"><%= m.winner_score %> - <%= m.loser_score %></td>
+            <td>
+              <span class="<%= m.player1_elo_change >= 0 ? 'match-elo-plus' : 'match-elo-minus' %>"><%= m.p1_name %>: <%= m.player1_elo_change >= 0 ? '+' : '' %><%= m.player1_elo_change %></span>,
+              <span class="<%= m.player2_elo_change >= 0 ? 'match-elo-plus' : 'match-elo-minus' %>"><%= m.p2_name %>: <%= m.player2_elo_change >= 0 ? '+' : '' %><%= m.player2_elo_change %></span>
+            </td>
+            <td class="match-date"><%= new Date(m.played_at).toLocaleDateString() %> <%= new Date(m.played_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %></td>
+            <% if (isAdmin) { %>
+              <td>
+                <button class="btn btn-sm" style="background:rgba(0,255,136,0.1);color:#00FF88;border:1px solid rgba(0,255,136,0.2);margin-right:4px;" onclick="editMatch(<%= m.id %>)">Edit</button>
+                <button class="btn btn-sm" style="background:rgba(255,68,102,0.15);color:#FF4466;border:1px solid rgba(255,68,102,0.3);" onclick="deleteMatch(<%= m.id %>)">Delete</button>
+              </td>
+            <% } %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% if (pages > 1) { %>
+    <div class="pagination">
+      <% for (let p = 1; p <= pages; p++) { %>
+        <a href="/matches?page=<%= p %>" class="<%= p === page ? 'active' : '' %>"><%= p %></a>
+      <% } %>
+    </div>
+  <% } %>
+</section>
+
+<footer class="footer">Forsaken Tide — Match History &nbsp;|&nbsp; Built by ValTheOneAndOnly ❤️</footer>
+<a href="https://discord.gg/jK4RmZgr86" target="_blank" class="discord-link" title="Join our Discord"><svg viewBox="0 0 127.14 96.36" width="28" height="28"><path fill="#5865F2" d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg></a>
+<% if (isAdmin) { %>
+<script>
+function editMatch(id) {
+  const newWs = prompt('Winner score (0-10):');
+  if (newWs === null) return;
+  const newLs = prompt('Loser score (0-9):');
+  if (newLs === null) return;
+  fetch('/api/admin/update-match', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: parseInt(id), winner_score: parseInt(newWs), loser_score: parseInt(newLs) }),
+  }).then(r => r.json()).then(d => {
+    if (d.success) location.reload();
+    else alert('Error: ' + (d.error || 'Unknown'));
+  }).catch(() => alert('Network error'));
+}
+
+function deleteMatch(id) {
+  if (!confirm('Delete match #' + id + '?')) return;
+  fetch('/api/admin/delete-match', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: parseInt(id) }),
+  }).then(r => r.json()).then(d => {
+    if (d.success) location.reload();
+    else alert('Error: ' + (d.error || 'Unknown'));
+  }).catch(() => alert('Network error'));
+}
+</script>
+<% } %>
+<script src="/script.js"></script>
+</body></html>
