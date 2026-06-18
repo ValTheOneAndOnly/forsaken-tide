@@ -51,10 +51,9 @@ db.init = async () => {
       recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_unique ON elo_history (user_id, recorded_at)`);
-
-  // Remove duplicate elo_history rows (keep oldest per user+timestamp)
-  try { await db.query(`DELETE FROM elo_history WHERE id NOT IN (SELECT MIN(id) FROM elo_history GROUP BY user_id, recorded_at)`); } catch(e) {}
+  // Remove duplicate elo_history rows first, then create unique index
+  try { await db.query(`DELETE FROM elo_history WHERE id NOT IN (SELECT MIN(id) FROM elo_history GROUP BY user_id, recorded_at)`); } catch(e) { console.error('Dedup error:', e.message); }
+  try { await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_unique ON elo_history (user_id, recorded_at)`); } catch(e) { console.error('Index error:', e.message); }
 
   // Backfill elo_history from existing matches
   try {

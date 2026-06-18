@@ -71,7 +71,7 @@ function isAdmin(req, res, next) {
 }
 
 app.get('/', async (req, res) => {
-  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, region, elo, elo_display, wins, losses, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
+  const rows = (await db.query('SELECT id, discord_id, username, roblox_username, region, elo, elo_display, wins, losses, current_streak, max_streak, build, build_items, avatar_url, verified FROM users ORDER BY elo DESC LIMIT 100')).rows;
   const top = rows.map(r => ({ ...r, rank: getRank(r.elo), fraction: getFraction(r.elo) }));
   const total = (await db.query('SELECT COUNT(*) as count FROM users')).rows[0].count;
   const matches = (await db.query('SELECT COUNT(*) as count FROM matches')).rows[0].count;
@@ -300,7 +300,6 @@ app.get('/api/admin/backfill-elo-history', async (req, res) => {
     await db.query(`DELETE FROM elo_history WHERE id NOT IN (SELECT MIN(id) FROM elo_history GROUP BY user_id, recorded_at)`);
     try { await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_unique ON elo_history (user_id, recorded_at)`); } catch(e) {}
     const matches = (await db.query('SELECT * FROM matches ORDER BY played_at ASC')).rows;
-    let count = 0;
     for (const m of matches) {
       const p1Elo = m.player1_elo_before + m.player1_elo_change;
       const p2Elo = m.player2_elo_before + m.player2_elo_change;
@@ -309,27 +308,27 @@ app.get('/api/admin/backfill-elo-history', async (req, res) => {
           'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1, $2, $3, $4), ($5, $6, $7, $8) ON CONFLICT (user_id, recorded_at) DO NOTHING',
           [m.player1_id, p1Elo, m.season_id, m.played_at, m.player2_id, p2Elo, m.season_id, m.played_at]
         );
-        count += 2;
       } catch(e) { console.error('Backfill row error:', e.message); }
     }
     // Recalculate streaks from match history
     const allUsers = (await db.query('SELECT id FROM users')).rows;
     for (const u of allUsers) {
-      const matchRows = (await db.query(
-        `SELECT winner_id FROM matches WHERE player1_id = $1 OR player2_id = $1 ORDER BY played_at ASC`,
-        [u.id]
-      )).rows;
+      const matchRows = (await db.query(`SELECT winner_id FROM matches WHERE player1_id = $1 OR player2_id = $1 ORDER BY played_at ASC`, [u.id])).rows;
       let streak = 0, maxStreak = 0;
       for (const mr of matchRows) {
-        if (mr.winner_id === u.id) { streak++; if (streak > maxStreak) maxStreak = streak; }
-        else streak = 0;
+        if (mr.winner_id === u.id) {
+          streak++;
+          if (streak > maxStreak) maxStreak = streak;
+        } else {
+          streak = 0;
+        }
       }
       await db.query('UPDATE users SET current_streak = $1, max_streak = $2 WHERE id = $3', [streak, maxStreak, u.id]);
     }
-    res.json({ success: true, inserted: count });
+    res.json({ success: true });
   } catch (e) {
     console.error('Backfill error:', e);
-    res.status(500).json({ error: 'Failed to backfill ELO history' });
+    res.status(500).json({ error: 'Failed: ' + e.message });
   }
 });
 
