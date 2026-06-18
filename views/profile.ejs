@@ -137,8 +137,10 @@ fetch('/api/elo-history/' + <%= player.id %>)
     const W = rect.width, H = rect.height;
 
     const vals = data.map(d => parseInt(d.elo));
-    const min = Math.min(...vals) - 20;
-    const max = Math.max(...vals) + 20;
+    const dataMin = Math.min(...vals);
+    const dataMax = Math.max(...vals);
+    const min = Math.max(0, dataMin - Math.max(10, (dataMax - dataMin) * 0.2));
+    const max = dataMax + Math.max(10, (dataMax - dataMin) * 0.2);
     const range = max - min || 1;
 
     const pad = { top: 12, bottom: 20, left: 8, right: 8 };
