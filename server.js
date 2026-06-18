@@ -305,17 +305,24 @@ app.get('/api/admin/backfill-elo-history', async (req, res) => {
     await db.query('DELETE FROM elo_history');
     const matches = (await db.query('SELECT * FROM matches ORDER BY played_at ASC')).rows;
     for (const m of matches) {
-      const t1 = new Date(new Date(m.played_at).getTime() - 1).toISOString();
+      const playedAt = new Date(m.played_at);
+      const before = new Date(playedAt.getTime() - 1);
       try {
-        // Insert before-ELO and after-ELO for both players
         await db.query(
-          'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1,$2,$3,$4),($5,$6,$7,$8),($9,$10,$11,$12),($13,$14,$15,$16)',
-          [
-            m.player1_id, m.player1_elo_before, m.season_id, t1,
-            m.player1_id, m.player1_elo_before + m.player1_elo_change, m.season_id, m.played_at,
-            m.player2_id, m.player2_elo_before, m.season_id, t1,
-            m.player2_id, m.player2_elo_before + m.player2_elo_change, m.season_id, m.played_at
-          ]
+          'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1,$2,$3,$4)',
+          [m.player1_id, m.player1_elo_before, m.season_id, before]
+        );
+        await db.query(
+          'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1,$2,$3,$4)',
+          [m.player1_id, m.player1_elo_before + m.player1_elo_change, m.season_id, playedAt]
+        );
+        await db.query(
+          'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1,$2,$3,$4)',
+          [m.player2_id, m.player2_elo_before, m.season_id, before]
+        );
+        await db.query(
+          'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1,$2,$3,$4)',
+          [m.player2_id, m.player2_elo_before + m.player2_elo_change, m.season_id, playedAt]
         );
       } catch(e) { console.error('Backfill row error:', e.message); }
     }
