@@ -27,6 +27,8 @@ db.init = async () => {
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS region TEXT DEFAULT ''`);
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak INTEGER DEFAULT 0`);
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS max_streak INTEGER DEFAULT 0`);
+  await db.query(`UPDATE users SET current_streak = 0 WHERE current_streak IS NULL`);
+  await db.query(`UPDATE users SET max_streak = 0 WHERE max_streak IS NULL`);
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS seasons (
