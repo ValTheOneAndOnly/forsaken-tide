@@ -296,12 +296,9 @@ app.post('/api/admin/delete-match', isAuth, isAdmin, async (req, res) => {
 app.get('/api/admin/backfill-elo-history', async (req, res) => {
   if (req.query.secret !== 'mitja-backfill') return res.status(403).json({ error: 'bad secret' });
   try {
-    // Deduplicate existing rows
-    let deleted = (await db.query(`DELETE FROM elo_history WHERE ctid NOT IN (SELECT MIN(ctid) FROM elo_history GROUP BY user_id, recorded_at)`)).rowCount;
-    deleted += (await db.query(`DELETE FROM elo_history WHERE id NOT IN (SELECT MIN(id) FROM elo_history GROUP BY user_id, recorded_at)`)).rowCount;
-    // Create unique index (safe after dedup)
+    await db.query(`DELETE FROM elo_history WHERE ctid NOT IN (SELECT MIN(ctid) FROM elo_history GROUP BY user_id, recorded_at)`);
+    await db.query(`DELETE FROM elo_history WHERE id NOT IN (SELECT MIN(id) FROM elo_history GROUP BY user_id, recorded_at)`);
     try { await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_unique ON elo_history (user_id, recorded_at)`); } catch(e) {}
-    // Backfill from matches
     const matches = (await db.query('SELECT * FROM matches ORDER BY played_at ASC')).rows;
     let count = 0;
     for (const m of matches) {
@@ -315,7 +312,21 @@ app.get('/api/admin/backfill-elo-history', async (req, res) => {
         count += 2;
       } catch(e) { console.error('Backfill row error:', e.message); }
     }
-    res.json({ success: true, inserted: count, deleted });
+    // Recalculate streaks from match history
+    const allUsers = (await db.query('SELECT id FROM users')).rows;
+    for (const u of allUsers) {
+      const matchRows = (await db.query(
+        `SELECT winner_id FROM matches WHERE player1_id = $1 OR player2_id = $1 ORDER BY played_at ASC`,
+        [u.id]
+      )).rows;
+      let streak = 0, maxStreak = 0;
+      for (const mr of matchRows) {
+        if (mr.winner_id === u.id) { streak++; if (streak > maxStreak) maxStreak = streak; }
+        else streak = 0;
+      }
+      await db.query('UPDATE users SET current_streak = $1, max_streak = $2 WHERE id = $3', [streak, maxStreak, u.id]);
+    }
+    res.json({ success: true, inserted: count });
   } catch (e) {
     console.error('Backfill error:', e);
     res.status(500).json({ error: 'Failed to backfill ELO history' });

@@ -123,7 +123,7 @@ function deleteMatch(id) {
 fetch('/api/elo-history/' + <%= player.id %>)
   .then(r => r.json())
   .then(data => {
-    if (!data || data.length < 2) {
+    if (!data || data.length < 1) {
       document.getElementById('eloNoData').style.display = 'block';
       return;
     }
@@ -145,7 +145,9 @@ fetch('/api/elo-history/' + <%= player.id %>)
     const cw = W - pad.left - pad.right;
     const ch = H - pad.top - pad.bottom;
 
-    function x(i) { return pad.left + (i / (vals.length - 1)) * cw; }
+    const cx = pad.left + cw / 2;
+
+    function x(i) { return vals.length === 1 ? cx : pad.left + (i / (vals.length - 1)) * cw; }
     function y(v) { return pad.top + ch - ((v - min) / range) * ch; }
 
     // Grid lines
@@ -159,36 +161,40 @@ fetch('/api/elo-history/' + <%= player.id %>)
       ctx.stroke();
     }
 
-    // Area fill
-    ctx.beginPath();
-    ctx.moveTo(x(0), y(vals[0]));
-    for (let i = 1; i < vals.length; i++) ctx.lineTo(x(i), y(vals[i]));
-    ctx.lineTo(x(vals.length - 1), H - pad.bottom);
-    ctx.lineTo(x(0), H - pad.bottom);
-    ctx.closePath();
-    const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
-    grad.addColorStop(0, 'rgba(255,215,0,0.25)');
-    grad.addColorStop(1, 'rgba(255,215,0,0.01)');
-    ctx.fillStyle = grad;
-    ctx.fill();
+    if (vals.length > 1) {
+      // Area fill
+      ctx.beginPath();
+      ctx.moveTo(x(0), y(vals[0]));
+      for (let i = 1; i < vals.length; i++) ctx.lineTo(x(i), y(vals[i]));
+      ctx.lineTo(x(vals.length - 1), H - pad.bottom);
+      ctx.lineTo(x(0), H - pad.bottom);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+      grad.addColorStop(0, 'rgba(255,215,0,0.25)');
+      grad.addColorStop(1, 'rgba(255,215,0,0.01)');
+      ctx.fillStyle = grad;
+      ctx.fill();
 
-    // Line
-    ctx.beginPath();
-    ctx.moveTo(x(0), y(vals[0]));
-    for (let i = 1; i < vals.length; i++) ctx.lineTo(x(i), y(vals[i]));
-    ctx.strokeStyle = '#FFD700';
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
+      // Line
+      ctx.beginPath();
+      ctx.moveTo(x(0), y(vals[0]));
+      for (let i = 1; i < vals.length; i++) ctx.lineTo(x(i), y(vals[i]));
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
 
     // Dots
-    const step = Math.max(1, Math.floor(vals.length / 40));
-    for (let i = 0; i < vals.length; i += step) {
-      ctx.beginPath();
-      ctx.arc(x(i), y(vals[i]), 3, 0, Math.PI * 2);
-      ctx.fillStyle = '#FFD700';
-      ctx.fill();
-    }
+    ctx.beginPath();
+    ctx.arc(x(0), y(vals[0]), 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFD700';
+    ctx.fill();
+    // Show current ELO label
+    ctx.fillStyle = '#888';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(vals[vals.length - 1] + ' ELO', cx, H - 4);
   })
   .catch(() => { document.getElementById('eloNoData').style.display = 'block'; });
 </script>
