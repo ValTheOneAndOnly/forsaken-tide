@@ -218,6 +218,8 @@ app.post('/api/match/result', async (req, res) => {
   const ws = Math.min(winner_score || 5, 10);
   const ls = Math.min(loser_score || 0, 9);
   const { changeA, changeB } = calcElo(p1.elo, p2.elo, wIsP1, ws, ls);
+  const newElo1 = p1.elo + changeA;
+  const newElo2 = p2.elo + changeB;
 
   await db.query(
     'INSERT INTO matches (player1_id, player2_id, winner_id, player1_elo_before, player2_elo_before, player1_elo_change, player2_elo_change, winner_score, loser_score, season_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
@@ -232,7 +234,7 @@ app.post('/api/match/result', async (req, res) => {
     await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1, current_streak = 0 WHERE id = $2', [changeA, p1.id]);
   }
 
-  await db.query('INSERT INTO elo_history (user_id, elo, season_id) VALUES ($1, $2, $3), ($4, $5, $6)', [p1.id, np1.elo, activeSeason ? activeSeason.id : null, p2.id, np2.elo, activeSeason ? activeSeason.id : null]);
+  await db.query('INSERT INTO elo_history (user_id, elo, season_id) VALUES ($1, $2, $3), ($4, $5, $6)', [p1.id, newElo1, activeSeason ? activeSeason.id : null, p2.id, newElo2, activeSeason ? activeSeason.id : null]);
 
   res.json({ success: true, p1: { elo_before: p1.elo, elo: np1.elo, change: changeA }, p2: { elo_before: p2.elo, elo: np2.elo, change: changeB }, winner: wIsP1 ? p1.username : p2.username, winner_score: ws, loser_score: ls });
 });
