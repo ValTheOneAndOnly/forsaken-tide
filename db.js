@@ -55,15 +55,20 @@ db.init = async () => {
   try { await db.query(`DELETE FROM elo_history WHERE id NOT IN (SELECT MIN(id) FROM elo_history GROUP BY user_id, recorded_at)`); } catch(e) { console.error('Dedup error:', e.message); }
   try { await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_unique ON elo_history (user_id, recorded_at)`); } catch(e) { console.error('Index error:', e.message); }
 
-  // Backfill elo_history from existing matches
+  // Backfill elo_history from existing matches (before + after for both players)
   try {
+    await db.query('DELETE FROM elo_history');
     const matches = (await db.query('SELECT * FROM matches ORDER BY played_at ASC')).rows;
     for (const m of matches) {
-      const p1Elo = m.player1_elo_before + m.player1_elo_change;
-      const p2Elo = m.player2_elo_before + m.player2_elo_change;
+      const t1 = new Date(new Date(m.played_at).getTime() - 1).toISOString();
+      const p1After = m.player1_elo_before + m.player1_elo_change;
+      const p2After = m.player2_elo_before + m.player2_elo_change;
       await db.query(
-        'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1, $2, $3, $4), ($5, $6, $7, $8) ON CONFLICT (user_id, recorded_at) DO NOTHING',
-        [m.player1_id, p1Elo, m.season_id, m.played_at, m.player2_id, p2Elo, m.season_id, m.played_at]
+        'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1,$2,$3,$4),($5,$6,$7,$8),($9,$10,$11,$12),($13,$14,$15,$16)',
+        [m.player1_id, m.player1_elo_before, m.season_id, t1,
+         m.player1_id, p1After, m.season_id, m.played_at,
+         m.player2_id, m.player2_elo_before, m.season_id, t1,
+         m.player2_id, p2After, m.season_id, m.played_at]
       );
     }
   } catch (e) { console.error('Backfill elo_history error:', e.message); }

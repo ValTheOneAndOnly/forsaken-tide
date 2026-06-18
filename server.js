@@ -234,7 +234,9 @@ app.post('/api/match/result', async (req, res) => {
     await db.query('UPDATE users SET elo = elo + $1, losses = losses + 1, current_streak = 0 WHERE id = $2', [changeA, p1.id]);
   }
 
-  await db.query('INSERT INTO elo_history (user_id, elo, season_id) VALUES ($1, $2, $3), ($4, $5, $6)', [p1.id, newElo1, activeSeason ? activeSeason.id : null, p2.id, newElo2, activeSeason ? activeSeason.id : null]);
+  await db.query('INSERT INTO elo_history (user_id, elo, season_id) VALUES ($1, $2, $3), ($4, $5, $6), ($7, $8, $9), ($10, $11, $12)',
+    [p1.id, p1.elo, activeSeason ? activeSeason.id : null, p1.id, newElo1, activeSeason ? activeSeason.id : null,
+     p2.id, p2.elo, activeSeason ? activeSeason.id : null, p2.id, newElo2, activeSeason ? activeSeason.id : null]);
 
   res.json({ success: true, p1: { elo_before: p1.elo, elo: np1.elo, change: changeA }, p2: { elo_before: p2.elo, elo: np2.elo, change: changeB }, winner: wIsP1 ? p1.username : p2.username, winner_score: ws, loser_score: ls });
 });
@@ -299,14 +301,21 @@ app.get('/api/admin/backfill-elo-history', async (req, res) => {
     await db.query(`DELETE FROM elo_history WHERE ctid NOT IN (SELECT MIN(ctid) FROM elo_history GROUP BY user_id, recorded_at)`);
     await db.query(`DELETE FROM elo_history WHERE id NOT IN (SELECT MIN(id) FROM elo_history GROUP BY user_id, recorded_at)`);
     try { await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_unique ON elo_history (user_id, recorded_at)`); } catch(e) {}
+    // Clear all elo_history to rebuild cleanly
+    await db.query('DELETE FROM elo_history');
     const matches = (await db.query('SELECT * FROM matches ORDER BY played_at ASC')).rows;
     for (const m of matches) {
-      const p1Elo = m.player1_elo_before + m.player1_elo_change;
-      const p2Elo = m.player2_elo_before + m.player2_elo_change;
+      const t1 = new Date(new Date(m.played_at).getTime() - 1).toISOString();
       try {
+        // Insert before-ELO and after-ELO for both players
         await db.query(
-          'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1, $2, $3, $4), ($5, $6, $7, $8) ON CONFLICT (user_id, recorded_at) DO NOTHING',
-          [m.player1_id, p1Elo, m.season_id, m.played_at, m.player2_id, p2Elo, m.season_id, m.played_at]
+          'INSERT INTO elo_history (user_id, elo, season_id, recorded_at) VALUES ($1,$2,$3,$4),($5,$6,$7,$8),($9,$10,$11,$12),($13,$14,$15,$16)',
+          [
+            m.player1_id, m.player1_elo_before, m.season_id, t1,
+            m.player1_id, m.player1_elo_before + m.player1_elo_change, m.season_id, m.played_at,
+            m.player2_id, m.player2_elo_before, m.season_id, t1,
+            m.player2_id, m.player2_elo_before + m.player2_elo_change, m.season_id, m.played_at
+          ]
         );
       } catch(e) { console.error('Backfill row error:', e.message); }
     }
