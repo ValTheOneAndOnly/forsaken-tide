@@ -82,7 +82,10 @@ app.get('/info', async (req, res) => {
   res.render('info', { user: req.session.user || null, isAdmin: req.session.user ? isAdminUser(req.session.user.discord_id) : false });
 });
 
-app.get('/matches', async (req, res) => {
+app.get('/matches', (req, res, next) => {
+  if (!req.session.user) return res.redirect('/');
+  next();
+}, async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
   const rows = (await db.query(`
