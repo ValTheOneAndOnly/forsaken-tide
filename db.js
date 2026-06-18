@@ -64,6 +64,8 @@ db.init = async () => {
       recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  await db.query(`ALTER TABLE elo_history ADD COLUMN IF NOT EXISTS elo_history_unique_key TEXT UNIQUE DEFAULT ''`);
+  await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_unique ON elo_history (user_id, recorded_at)`);
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS matches (
