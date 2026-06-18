@@ -112,6 +112,8 @@ function initBot() {
       const rank = rankRes.rows[0].r + 1;
       const userRank = user.elo >= 701 ? 'Z' : user.elo >= 551 ? 'Y' : user.elo >= 401 ? 'X' : user.elo >= 350 ? 'S' : user.elo >= 250 ? 'A' : user.elo >= 100 ? 'B' : 'C';
       const userFrac = user.elo >= 551 ? 3 : user.elo >= 350 ? 2 : 1;
+      const streak = (user.current_streak || 0) > 0 ? '🔥' + user.current_streak : '—';
+      const bestStreak = user.max_streak || 0;
       const embed = new EmbedBuilder()
         .setTitle(user.username).setThumbnail(user.avatar_url || target.displayAvatarURL()).setColor(0xFFD700)
         .addFields(
@@ -119,6 +121,7 @@ function initBot() {
           { name: '◈ Rank', value: `**${userRank}**`, inline: true },
           { name: '▣ Fraction', value: `**F${userFrac}**`, inline: true },
           { name: '◉ W/L', value: `${user.wins}W / ${user.losses}L`, inline: true },
+          { name: '■ Streak', value: `${streak} (best: ${bestStreak})`, inline: true },
           { name: '■ Win Rate', value: `${user.wins + user.losses > 0 ? Math.round(user.wins / (user.wins + user.losses) * 100) : 0}%`, inline: true },
           { name: '⛓ Roblox', value: user.roblox_username || 'Not set', inline: true },
           { name: '🌍 Region', value: user.region || 'Not set', inline: true },
@@ -129,14 +132,15 @@ function initBot() {
     }
 
     if (interaction.commandName === 'ftleaderboard') {
-      const result = await db.query('SELECT username, elo, elo_display, wins, losses FROM users ORDER BY elo DESC LIMIT 10');
+      const result = await db.query('SELECT username, elo, elo_display, wins, losses, current_streak, max_streak FROM users ORDER BY elo DESC LIMIT 10');
       const top = result.rows;
       if (top.length === 0) return interaction.reply({ content: 'No players yet. Use `/ftverify` to join!', ephemeral: true });
       const desc = top.map((p, i) => {
         const f = p.elo >= 551 ? 3 : p.elo >= 350 ? 2 : 1;
         const r = p.elo >= 701 ? 'Z' : p.elo >= 551 ? 'Y' : p.elo >= 401 ? 'X' : p.elo >= 350 ? 'S' : p.elo >= 250 ? 'A' : p.elo >= 100 ? 'B' : 'C';
         const m = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        return `${m} **${p.username}** [${r} F${f}] — ${p.elo_display || p.elo} ELO (${p.wins}W/${p.losses}L)`;
+        const s = (p.current_streak || 0) > 0 ? '🔥' + p.current_streak : '';
+        return `${m} **${p.username}** [${r} F${f}] — ${p.elo_display || p.elo} ELO (${p.wins}W/${p.losses}L)${s ? ' ' + s : ''}`;
       }).join('\n');
       const embed = new EmbedBuilder().setTitle('⚓ Forsaken Tide — Top 10').setDescription(desc).setColor(0xFFD700).setFooter({ text: 'Full leaderboard at ' + SERVER_URL });
       return interaction.reply({ embeds: [embed] });
@@ -196,6 +200,29 @@ function initBot() {
           if (m1) { await syncRankRole(m1, data.p1.elo); await syncRegion(m1); }
           if (m2) { await syncRankRole(m2, data.p2.elo); await syncRegion(m2); }
         } catch (e) { console.error('[Bot] Role sync error:', e); }
+        // DM notifications
+        try {
+          const p1dm = await client.users.fetch(p1User.id).catch(() => null);
+          const p2dm = await client.users.fetch(p2User.id).catch(() => null);
+          const winnerName = data.winner;
+          const scoreLine = `${data.winner_score}-${data.loser_score}`;
+          if (p1dm) {
+            const em = new EmbedBuilder()
+              .setTitle('⚔ Match Result')
+              .setDescription(`**${winnerName}** won ${scoreLine}`)
+              .setColor(p1User.id === winner.id ? 0x00FF88 : 0xFF4466)
+              .addFields({ name: 'Your ELO', value: `${data.p1.elo_before} → ${data.p1.elo} (${data.p1.change > 0 ? '+' : ''}${data.p1.change})` });
+            await p1dm.send({ embeds: [em] }).catch(() => {});
+          }
+          if (p2dm) {
+            const em = new EmbedBuilder()
+              .setTitle('⚔ Match Result')
+              .setDescription(`**${winnerName}** won ${scoreLine}`)
+              .setColor(p2User.id === winner.id ? 0x00FF88 : 0xFF4466)
+              .addFields({ name: 'Your ELO', value: `${data.p2.elo_before} → ${data.p2.elo} (${data.p2.change > 0 ? '+' : ''}${data.p2.change})` });
+            await p2dm.send({ embeds: [em] }).catch(() => {});
+          }
+        } catch (e) { console.error('[Bot] DM error:', e); }
       });
     }
 

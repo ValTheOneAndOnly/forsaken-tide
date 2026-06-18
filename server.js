@@ -238,7 +238,7 @@ app.post('/api/match/result', async (req, res) => {
     [p1.id, p1.elo, activeSeason ? activeSeason.id : null, p1.id, newElo1, activeSeason ? activeSeason.id : null,
      p2.id, p2.elo, activeSeason ? activeSeason.id : null, p2.id, newElo2, activeSeason ? activeSeason.id : null]);
 
-  res.json({ success: true, p1: { elo_before: p1.elo, elo: np1.elo, change: changeA }, p2: { elo_before: p2.elo, elo: np2.elo, change: changeB }, winner: wIsP1 ? p1.username : p2.username, winner_score: ws, loser_score: ls });
+  res.json({ success: true, p1: { elo_before: p1.elo, elo: newElo1, change: changeA }, p2: { elo_before: p2.elo, elo: newElo2, change: changeB }, winner: wIsP1 ? p1.username : p2.username, winner_score: ws, loser_score: ls });
 });
 
 app.post('/api/admin/update-match', isAuth, isAdmin, async (req, res) => {
